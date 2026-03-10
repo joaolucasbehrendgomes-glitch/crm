@@ -1274,7 +1274,8 @@ const sbFetch = async (path, opts={}) => {
       ...(opts.headers||{})
     }
   });
-  if(!r.ok){ const e=await r.text(); console.error('SB error:',e); return null; }
+  if(!r.ok){ const e=await r.text(); console.error('SB error:',e); sbOnline=false; if(typeof atualizarIndicador==='function') atualizarIndicador(); return null; }
+  sbOnline=true; if(typeof atualizarIndicador==='function') atualizarIndicador();
   const ct=r.headers.get('content-type')||'';
   return ct.includes('json') ? r.json() : null;
 };
