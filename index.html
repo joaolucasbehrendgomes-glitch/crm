@@ -371,6 +371,7 @@ tbody tr:last-child td{border-bottom:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.success{border-color:#064e3b;color:var(--green)}
 .toast.error{border-color:#7f1d1d;color:var(--red)}
+.toast.info{border-color:#1e3a5f;color:var(--blue)}
 
 /* ===== BOTTOM NAV (mobile) ===== */
 .bottom-nav{display:none;min-height:60px;height:calc(60px + env(safe-area-inset-bottom));background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
@@ -519,8 +520,8 @@ tbody tr:last-child td{border-bottom:none}
 .exp-btn.blue:hover{border-color:#1e3a5f;color:var(--blue)}
 
 /* ===== PWA INSTALL BANNER ===== */
-.pwa-banner{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:12px;right:12px;background:linear-gradient(135deg,#1a1e2a,#222736);border:1px solid var(--gold-dim);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;z-index:500;box-shadow:0 8px 32px rgba(0,0,0,.5);transform:translateY(120px);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
-.pwa-banner.show{transform:translateY(0)}
+.pwa-banner{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:12px;right:12px;background:linear-gradient(135deg,#1a1e2a,#222736);border:1px solid var(--gold-dim);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;z-index:500;box-shadow:0 8px 32px rgba(0,0,0,.5);transform:translateY(120px);opacity:0;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .4s ease}
+.pwa-banner.show{transform:translateY(0);opacity:1}
 .pwa-banner-icon{font-size:28px;flex-shrink:0}
 .pwa-banner-text{flex:1;min-width:0}
 .pwa-banner-title{font-size:13px;font-weight:600;color:var(--gold);margin-bottom:2px}
@@ -1486,22 +1487,25 @@ function irParaClientesAtivos() {
 }
 
 // Navegar para Clientes com filtro de status
+// status='ativo' ou '__ativos__' → mostra todos exceto Perdido e Venda Fechada
 function irParaClientes(status) {
   goTo('clientes');
   setTimeout(() => {
+    const isAtivo = status === 'ativo' || status === '__ativos__';
     // Atualizar chips de filtro
     document.querySelectorAll('.fchip').forEach(c => {
       const fs = c.getAttribute('data-fs') || '';
-      if(fs === (status||'')) {
-        c.classList.add('on');
+      // Para filtro ativo, nenhum chip específico ativa (mantém "Todos" ligado)
+      if(isAtivo) {
+        c.classList.toggle('on', fs === '');
       } else {
-        c.classList.remove('on');
+        c.classList.toggle('on', fs === (status||''));
       }
     });
-    filterStatus = status || '';
-    // Atualizar select layout A
+    filterStatus = isAtivo ? '__ativos__' : (status || '');
+    // Atualizar select layout A (só para status reais)
     const sel = document.getElementById('fa-status');
-    if(sel) sel.value = status || '';
+    if(sel) sel.value = isAtivo ? '' : (status || '');
     renderAll();
     // Scroll ao topo da lista
     const lp = document.querySelector('.list-pane');
@@ -1872,12 +1876,12 @@ function renderDash(){
     {key:'Venda Fechada',   label:'Venda Fechada',   color:'#34d399'},
   ];
   const total = DB.length || 1;
-  const topo = counts[funil_steps[0].key] || 0;
   let funil_html = '';
   funil_steps.forEach((step, i) => {
     const cnt = counts[step.key] || 0;
     const pct = Math.round((cnt / total) * 100);
-    const barW = Math.max(cnt ? (cnt / (topo||1)) * 100 : 0, 0);
+    // barW proporcional ao total de leads — não ao topo do funil
+    const barW = Math.min((cnt / total) * 100, 100);
     funil_html += `<div class="funil-step" onclick="irParaClientes('${step.key}')" style="cursor:pointer" title="Ver: ${step.label}">
       <div class="funil-step-name">${step.label}</div>
       <div class="funil-step-count">${cnt}</div>
@@ -1908,7 +1912,7 @@ function renderDash(){
   const ticketMedio = fechadas > 0 ? '—' : '—';
   document.getElementById('dash-conv').innerHTML = `
     <div class="conv-item" onclick="irParaClientes('')" title="Ver todos os leads"><div class="conv-val" style="color:var(--gold)">${DB.length}</div><div class="conv-lbl">Total Leads</div></div>
-    <div class="conv-item" onclick="irParaClientesAtivos()" title="Ver leads ativos"><div class="conv-val" style="color:var(--blue)">${ativos}</div><div class="conv-lbl">Ativos</div></div>
+    <div class="conv-item" onclick="irParaClientes('ativo')" title="Ver leads ativos"><div class="conv-val" style="color:var(--blue)">${ativos}</div><div class="conv-lbl">Ativos</div></div>
     <div class="conv-item" onclick="irParaClientes('Venda Fechada')" title="Ver fechados"><div class="conv-val" style="color:var(--green)">${fechadas}</div><div class="conv-lbl">Fechados</div></div>
     <div class="conv-item" onclick="irParaClientes('Perdido')" title="Ver perdidos"><div class="conv-val" style="color:var(--red)">${perdidos}</div><div class="conv-lbl">Perdidos</div></div>
     <div class="conv-item" onclick="irParaClientes('Venda Fechada')" title="Ver fechados"><div class="conv-val" style="color:var(--gold)">${taxaConv}%</div><div class="conv-lbl">Conversão</div></div>
@@ -2430,22 +2434,38 @@ window.addEventListener('beforeinstallprompt', (e) => {
   showPWABanner();
 });
 
+let _pwaDismissTimer = null;
+
 function showPWABanner() {
-  // Não mostrar se já instalado ou já dispensado
-  if(localStorage.getItem('pwa_dismissed')) return;
+  // Não mostrar se já viu antes, já instalado ou em modo standalone
+  if(localStorage.getItem('pwa_dismissed') || localStorage.getItem('pwa_banner_shown')) return;
   if(window.matchMedia('(display-mode: standalone)').matches) return;
+  if(window.navigator.standalone) return; // iOS standalone
   setTimeout(() => {
-    document.getElementById('pwa-banner').classList.add('show');
+    const banner = document.getElementById('pwa-banner');
+    if(!banner) return;
+    banner.classList.add('show');
+    // Auto-dismiss após 5 segundos com fade + salva localStorage
+    _pwaDismissTimer = setTimeout(() => dismissPWA(true), 5000);
   }, 3000);
 }
 
-function dismissPWA() {
-  document.getElementById('pwa-banner').classList.remove('show');
-  localStorage.setItem('pwa_dismissed', '1');
+// autoClose=true → fechou sozinho (não precisa de interação extra)
+function dismissPWA(autoClose) {
+  clearTimeout(_pwaDismissTimer);
+  const banner = document.getElementById('pwa-banner');
+  if(banner) banner.classList.remove('show');
+  // Salva os dois keys para garantir compatibilidade
+  try {
+    localStorage.setItem('pwa_dismissed', '1');
+    localStorage.setItem('pwa_banner_shown', 'true');
+  } catch(e) {}
 }
 
 function showPWAInstructions() {
+  clearTimeout(_pwaDismissTimer); // cancela auto-dismiss para não conflitar
   document.getElementById('pwa-banner').classList.remove('show');
+  try { localStorage.setItem('pwa_dismissed','1'); localStorage.setItem('pwa_banner_shown','true'); } catch(e) {}
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
 
