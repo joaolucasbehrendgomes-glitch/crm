@@ -89,13 +89,13 @@ body.light{--bg:#f5f0e8;--bg2:#ffffff;--bg3:#f0ebe0;--bg4:#e8e0d0;--border:#e2d9
 .view.active{display:flex;min-height:0}
 
 /* ===== LAYOUT A: TABELA ===== */
-.layout-a .view-clientes-inner{flex:1;overflow-y:auto;padding:16px}
+.layout-a .view-clientes-inner{flex:1;overflow-y:auto;padding:16px;min-height:0}
 .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .tbl-head{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
 .tbl-filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .fsel{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer}
 .fclear{background:transparent;border:1px solid var(--border2);color:var(--text3);padding:6px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
-.tbl-scroll{overflow-x:auto}
+.tbl-scroll{overflow-x:auto;overflow-y:visible}
 table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
 thead th{padding:9px 12px;text-align:left;color:var(--text3);font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg3)}
 tbody tr{transition:background .15s}
@@ -855,7 +855,7 @@ tbody tr:last-child td{border-bottom:none}
     <!-- VIEW: CLIENTES -->
     <div class="view active" id="view-clientes">
       <!-- LAYOUT A: TABELA -->
-      <div class="view-clientes-inner" id="vc-a" style="display:none;flex:1;overflow-y:auto;padding:16px">
+      <div class="view-clientes-inner" id="vc-a" style="display:none;flex:1;min-height:0;overflow-y:auto;padding:16px">
         <div class="table-wrap">
           <div class="tbl-head">
             <div class="tbl-filters">
@@ -2313,7 +2313,7 @@ function setLayout(l){
   document.body.classList.remove('layout-a','layout-b','layout-c');
   document.body.classList.add('layout-'+l);
   // Show correct panel
-  document.getElementById('vc-a').style.display=l==='a'?'flex':'none';
+  document.getElementById('vc-a').style.display=l==='a'?'block':'none';
   document.getElementById('vc-b').style.display=l==='b'?'flex':'none';
   document.getElementById('vc-c').style.display=l==='c'?'flex':'none';
   // Update logo font
@@ -3390,41 +3390,88 @@ async function salvarUsuario() {
   if(!id && !senha) { showToast('Senha é obrigatória para novo usuário','error'); return; }
   if(senha && senha.length < 6) { showToast('Senha deve ter ao menos 6 caracteres','error'); return; }
 
-  const payload = {
-    id:          id || ('usr_'+Date.now()),
-    nome,
-    login,
-    email:       document.getElementById('mu-email').value.trim()||null,
-    telefone:    document.getElementById('mu-tel').value.trim()||null,
-    creci:       document.getElementById('mu-creci').value.trim()||null,
-    tipo_pessoa: document.getElementById('mu-tipopessoa').value,
-    cpf_cnpj:    document.getElementById('mu-cpfcnpj').value.trim()||null,
-    pix:         document.getElementById('mu-pix').value.trim()||null,
-    banco:       document.getElementById('mu-banco').value.trim()||null,
-    agencia:     document.getElementById('mu-agencia').value.trim()||null,
-    conta:       document.getElementById('mu-conta').value.trim()||null,
-    nivel:       document.getElementById('mu-nivel').value,
-    permissoes: {
-      deletar:    document.getElementById('perm-deletar').checked,
-      exportar:   document.getElementById('perm-exportar').checked,
-      email_massa:document.getElementById('perm-email').checked,
-      imoveis:    document.getElementById('perm-imoveis').checked,
-    },
-    ativo: true,
-    created_at: new Date().toISOString(),
+  const permissoes = {
+    deletar:    document.getElementById('perm-deletar').checked,
+    exportar:   document.getElementById('perm-exportar').checked,
+    email_massa:document.getElementById('perm-email').checked,
+    imoveis:    document.getElementById('perm-imoveis').checked,
   };
 
-  if(senha) payload.senha = senha;
+  let resultado = null;
 
-  const err = await sbFetch('usuarios?on_conflict=id', {
-    method: 'POST',
-    prefer: 'return=minimal',
-    headers: {'Prefer':'resolution=merge-duplicates,return=minimal'},
-    body: JSON.stringify(payload)
-  });
+  if(id) {
+    // ── EDIÇÃO: usa PATCH para atualizar apenas os campos editados ──
+    // Não inclui created_at nem força ativo (preserva estado atual)
+    const patchPayload = {
+      nome,
+      login,
+      nivel:       document.getElementById('mu-nivel').value,
+      email:       document.getElementById('mu-email').value.trim()||null,
+      telefone:    document.getElementById('mu-tel').value.trim()||null,
+      creci:       document.getElementById('mu-creci').value.trim()||null,
+      tipo_pessoa: document.getElementById('mu-tipopessoa').value,
+      cpf_cnpj:    document.getElementById('mu-cpfcnpj').value.trim()||null,
+      pix:         document.getElementById('mu-pix').value.trim()||null,
+      banco:       document.getElementById('mu-banco').value.trim()||null,
+      agencia:     document.getElementById('mu-agencia').value.trim()||null,
+      conta:       document.getElementById('mu-conta').value.trim()||null,
+      permissoes,
+    };
+    if(senha) patchPayload.senha = senha;
+
+    // return=representation faz o Supabase devolver a linha atualizada como JSON
+    // Isso permite confirmar que o UPDATE foi aceito (array vazio = RLS bloqueou ou id não existe)
+    resultado = await sbFetch(`usuarios?id=eq.${id}`, {
+      method: 'PATCH',
+      prefer: 'return=representation',
+      body: JSON.stringify(patchPayload)
+    });
+  } else {
+    // ── CRIAÇÃO: usa POST com novo id e created_at ──
+    const postPayload = {
+      id:          'usr_'+Date.now(),
+      nome,
+      login,
+      senha,
+      nivel:       document.getElementById('mu-nivel').value,
+      email:       document.getElementById('mu-email').value.trim()||null,
+      telefone:    document.getElementById('mu-tel').value.trim()||null,
+      creci:       document.getElementById('mu-creci').value.trim()||null,
+      tipo_pessoa: document.getElementById('mu-tipopessoa').value,
+      cpf_cnpj:    document.getElementById('mu-cpfcnpj').value.trim()||null,
+      pix:         document.getElementById('mu-pix').value.trim()||null,
+      banco:       document.getElementById('mu-banco').value.trim()||null,
+      agencia:     document.getElementById('mu-agencia').value.trim()||null,
+      conta:       document.getElementById('mu-conta').value.trim()||null,
+      permissoes,
+      ativo:       true,
+      created_at:  new Date().toISOString(),
+    };
+    resultado = await sbFetch('usuarios', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(postPayload)
+    });
+  }
+
+  // Verifica falha no PATCH: com return=representation, Supabase retorna array com a linha atualizada.
+  // Array vazio [] significa que o id não foi encontrado ou RLS bloqueou o UPDATE.
+  // null significa erro HTTP (sbFetch retorna null em qualquer r.ok===false).
+  if(id) {
+    if(!resultado || (Array.isArray(resultado) && resultado.length === 0)) {
+      showToast('❌ Alteração não salva. Verifique permissões ou conexão.', 'error');
+      await loadUsuarios(); // recarrega para mostrar estado real
+      return;
+    }
+    // Atualiza _usuarios em memória imediatamente com os dados confirmados pelo Supabase
+    const updated = Array.isArray(resultado) ? resultado[0] : null;
+    if(updated) {
+      _usuarios = _usuarios.map(u => u.id === updated.id ? updated : u);
+    }
+  }
 
   closeModalUsuario();
-  await registrarLog('usuario', `${id ? 'Editou' : 'Criou'} usuário ${nome}`);
+  registrarLog('usuario', `${id ? 'Editou' : 'Criou'} usuário ${nome}`).catch(()=>{});
   await loadUsuarios();
   showToast(id ? '✅ Usuário atualizado!' : '✅ Usuário criado!', 'success');
 }
@@ -3528,7 +3575,7 @@ if(_localBackup && _localBackup !== '[]') localStorage.setItem('crm_v4_backup', 
 // Apply saved theme/layout
 document.body.classList.remove('dark','light','layout-a','layout-b','layout-c');
 document.body.classList.add(curPalette,'layout-'+curLayout);
-document.getElementById('vc-a').style.display=curLayout==='a'?'flex':'none';
+document.getElementById('vc-a').style.display=curLayout==='a'?'block':'none';
 document.getElementById('vc-b').style.display=curLayout==='b'?'flex':'none';
 document.getElementById('vc-c').style.display=curLayout==='c'?'flex':'none';
 ['a','b','c'].forEach(x=>document.getElementById('td-'+x).classList.toggle('active',x===curLayout));
