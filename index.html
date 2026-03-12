@@ -212,7 +212,8 @@ tbody tr:last-child td{border-bottom:none}
 .section-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--text);margin-bottom:14px}
 .section-title span{color:var(--gold)}
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:13px;position:relative;overflow:hidden}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:13px;position:relative;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.35);border-color:var(--border2)}
 .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .stat-gold::after{background:linear-gradient(90deg,var(--gold),var(--gold2))}
 .stat-blue::after{background:var(--blue)}
@@ -543,9 +544,22 @@ tbody tr:last-child td{border-bottom:none}
 .funil-arrow-line{flex:1;height:1px;background:var(--border2);border-style:dashed}
 .funil-arrow-pct{font-size:10px;color:var(--text3);background:var(--bg3);padding:1px 7px;border-radius:10px;white-space:nowrap}
 .conv-total{display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-top:14px}
-.conv-item{text-align:center}
+.conv-item{text-align:center;cursor:pointer;padding:6px 10px;border-radius:8px;transition:background .15s}
+.conv-item:hover{background:var(--bg3)}
 .conv-val{font-size:18px;font-weight:700}
 .conv-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+/* ===== NOTA POPUP (LAYOUT A) ===== */
+#nota-popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:3000;align-items:center;justify-content:center;padding:16px}
+#nota-popup-overlay.open{display:flex}
+.nota-popup-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:22px 24px;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nota-popup-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px}
+.nota-popup-name{font-family:'DM Serif Display',serif;font-size:16px;color:var(--gold);flex:1;min-width:0}
+.nota-popup-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1;padding:0;flex-shrink:0;transition:color .15s}
+.nota-popup-close:hover{color:var(--text)}
+.nota-popup-body{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px;white-space:pre-wrap;max-height:260px;overflow-y:auto;padding-right:2px}
+.nota-popup-empty{font-size:13px;color:var(--text3);font-style:italic;margin-bottom:16px}
+.nota-popup-btns{display:flex;justify-content:flex-end;gap:8px}
 
 /* ===== MATCHING LEAD ↔ IMÓVEL ===== */
 .match-section{margin-top:18px;border-top:1px solid var(--border);padding-top:16px}
@@ -871,7 +885,7 @@ tbody tr:last-child td{border-bottom:none}
               <thead><tr>
                 <th>Nome</th><th>Telefone</th><th>Imóvel</th><th>Origem</th><th>Status</th>
                 <th>Classificação</th><th>Prioridade</th><th>Score</th><th>Dias</th>
-                <th>Gargalo</th><th>Potencial</th><th>Momento</th><th>Local</th><th>Ações</th>
+                <th>Gargalo</th><th>Potencial</th><th>Momento</th><th>Local</th><th>Notas</th><th>Ações</th>
               </tr></thead>
               <tbody id="fa-tbody"></tbody>
             </table>
@@ -1109,6 +1123,21 @@ tbody tr:last-child td{border-bottom:none}
   </div>
   <button class="pwa-banner-close" onclick="dismissPWA()">✕</button>
   <button class="pwa-banner-btn" onclick="showPWAInstructions()">Instalar</button>
+</div>
+
+<!-- NOTA POPUP -->
+<div id="nota-popup-overlay" onclick="if(event.target===this)closeNotaPopup()">
+  <div class="nota-popup-box">
+    <div class="nota-popup-header">
+      <div class="nota-popup-name" id="nota-popup-nome">—</div>
+      <button class="nota-popup-close" onclick="closeNotaPopup()">✕</button>
+    </div>
+    <div id="nota-popup-body"></div>
+    <div class="nota-popup-btns">
+      <button class="mf-cancel" onclick="closeNotaPopup()">Fechar</button>
+      <button class="mf-save" id="nota-popup-edit-btn">✏️ Editar</button>
+    </div>
+  </div>
 </div>
 
 <!-- CONFIRM MODAL -->
@@ -1419,6 +1448,43 @@ const sbDeleteVis = async (id) => {
 
 // ======= INIT: Load from Supabase =======
 // Indicador de conexão — função global
+// ======= NOTA POPUP (LAYOUT A) =======
+function showNotaPopup(clientId) {
+  const c = DB.find(x => x.id === clientId);
+  if(!c) return;
+  document.getElementById('nota-popup-nome').textContent = c.nome;
+  const body = document.getElementById('nota-popup-body');
+  if(c.obs && c.obs.trim()) {
+    body.className = 'nota-popup-body';
+    body.textContent = c.obs;
+  } else {
+    body.className = 'nota-popup-empty';
+    body.textContent = 'Nenhuma nota. Clique em Editar para adicionar.';
+  }
+  document.getElementById('nota-popup-edit-btn').onclick = () => { closeNotaPopup(); openModal(clientId); };
+  document.getElementById('nota-popup-overlay').classList.add('open');
+}
+function closeNotaPopup() {
+  document.getElementById('nota-popup-overlay').classList.remove('open');
+}
+
+// Navegar para Clientes mostrando apenas ativos (excluindo Perdido e Venda Fechada)
+function irParaClientesAtivos() {
+  goTo('clientes');
+  setTimeout(() => {
+    // Ativa chip "Todos" visualmente (não há chip próprio para "Ativos")
+    document.querySelectorAll('.fchip').forEach(c => c.classList.remove('on'));
+    const todosChip = document.querySelector('.fchip[data-fs=""]');
+    if(todosChip) todosChip.classList.add('on');
+    filterStatus = '__ativos__';
+    const sel = document.getElementById('fa-status');
+    if(sel) sel.value = '';
+    renderAll();
+    const lp = document.querySelector('.list-pane');
+    if(lp) lp.scrollTop = 0;
+  }, 150);
+}
+
 // Navegar para Clientes com filtro de status
 function irParaClientes(status) {
   goTo('clientes');
@@ -1560,7 +1626,10 @@ const getRows=()=>{
   return DB.filter(c=>{
     const ok=!searchQ||[c.nome,c.telefone,c.imovelAtual,c.imovelOrigem,c.local,c.obs].join(' ').toLowerCase().includes(searchQ);
     const d=getDias(c),sc=calcScore({...c,diasSemAtualiz:d}),cl=calcClassif(c,sc),pr=calcPrio(c,d);
-    const fsMatch=(curLayout==='c')?(!fS||c.status===fS):(!fA||c.status===fA);
+    const _ativos = s => s!=='Perdido' && s!=='Venda Fechada';
+    const fsMatch=(curLayout==='c')
+      ? (!fS || (fS==='__ativos__' ? _ativos(c.status) : c.status===fS))
+      : (fS==='__ativos__' ? _ativos(c.status) : (!fA||c.status===fA));
     const clMatch=!fC||cl===fC; const prMatch=!fP||pr===fP;
     return ok&&fsMatch&&clMatch&&prMatch;
   }).sort((a,b)=>calcScore({...b,diasSemAtualiz:getDias(b)})-calcScore({...a,diasSemAtualiz:getDias(a)}));
@@ -1587,6 +1656,7 @@ function renderA(){
       <td><span class="badge ${bPot(c.potencial)}">${c.potencial||'—'}</span></td>
       <td style="font-size:11px;color:var(--text2)">${c.momento||'—'}</td>
       <td style="font-size:11px;color:var(--gold)">${c.local||'—'}</td>
+      <td style="text-align:center"><button onclick="showNotaPopup('${c.id}')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 4px;line-height:1;border-radius:4px;transition:transform .15s" title="${(c.obs&&c.obs.trim())?'Ver nota':'Sem nota — clique para editar'}" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform=''">${(c.obs&&c.obs.trim())?'🟢':'🔴'}</button></td>
       <td><div style="display:flex;gap:4px"><button class="act-btn" onclick="openModal('${c.id}')">✏️</button><button class="del-btn" onclick="deleteClient('${c.id}')">🗑</button></div></td>
     </tr>`;
   }).join('');
@@ -1785,10 +1855,13 @@ function renderDash(){
   const counts={};let atacar=[];
   DB.forEach(c=>{counts[c.status]=(counts[c.status]||0)+1;const d=getDias(c),sc=calcScore({...c,diasSemAtualiz:d}),pr=calcPrio(c,d);if(pr==='🔥 Atacar agora')atacar.push({...c,sc,d});});
   document.getElementById('dash-stats').innerHTML=[
-    {l:'Total',v:DB.length,c:'stat-gold'},{l:'Novo Lead',v:counts['Novo Lead']||0,c:'stat-blue'},
-    {l:'Atendimento',v:counts['Em Atendimento']||0,c:'stat-amber'},{l:'Em Proposta',v:counts['Em Proposta']||0,c:'stat-orange'},
-    {l:'Fechadas',v:counts['Venda Fechada']||0,c:'stat-green'},{l:'Perdidos',v:counts['Perdido']||0,c:'stat-red'},
-  ].map(x=>`<div class="stat-card ${x.c}"><div class="stat-val">${x.v}</div><div class="stat-lbl">${x.l}</div></div>`).join('');
+    {l:'Total',v:DB.length,c:'stat-gold',s:''},
+    {l:'Novo Lead',v:counts['Novo Lead']||0,c:'stat-blue',s:'Novo Lead'},
+    {l:'Atendimento',v:counts['Em Atendimento']||0,c:'stat-amber',s:'Em Atendimento'},
+    {l:'Em Proposta',v:counts['Em Proposta']||0,c:'stat-orange',s:'Em Proposta'},
+    {l:'Fechadas',v:counts['Venda Fechada']||0,c:'stat-green',s:'Venda Fechada'},
+    {l:'Perdidos',v:counts['Perdido']||0,c:'stat-red',s:'Perdido'},
+  ].map(x=>`<div class="stat-card ${x.c}" onclick="irParaClientes('${x.s}')" title="Ver: ${x.l}"><div class="stat-val">${x.v}</div><div class="stat-lbl">${x.l}</div></div>`).join('');
 
   // ---- FUNIL DE CONVERSÃO ----
   const funil_steps = [
@@ -1834,11 +1907,11 @@ function renderDash(){
   const taxaConv = DB.length > 0 ? ((fechadas / DB.length) * 100).toFixed(1) : '0.0';
   const ticketMedio = fechadas > 0 ? '—' : '—';
   document.getElementById('dash-conv').innerHTML = `
-    <div class="conv-item"><div class="conv-val" style="color:var(--gold)">${DB.length}</div><div class="conv-lbl">Total Leads</div></div>
-    <div class="conv-item"><div class="conv-val" style="color:var(--blue)">${ativos}</div><div class="conv-lbl">Ativos</div></div>
-    <div class="conv-item"><div class="conv-val" style="color:var(--green)">${fechadas}</div><div class="conv-lbl">Fechados</div></div>
-    <div class="conv-item"><div class="conv-val" style="color:var(--red)">${perdidos}</div><div class="conv-lbl">Perdidos</div></div>
-    <div class="conv-item"><div class="conv-val" style="color:var(--gold)">${taxaConv}%</div><div class="conv-lbl">Conversão</div></div>
+    <div class="conv-item" onclick="irParaClientes('')" title="Ver todos os leads"><div class="conv-val" style="color:var(--gold)">${DB.length}</div><div class="conv-lbl">Total Leads</div></div>
+    <div class="conv-item" onclick="irParaClientesAtivos()" title="Ver leads ativos"><div class="conv-val" style="color:var(--blue)">${ativos}</div><div class="conv-lbl">Ativos</div></div>
+    <div class="conv-item" onclick="irParaClientes('Venda Fechada')" title="Ver fechados"><div class="conv-val" style="color:var(--green)">${fechadas}</div><div class="conv-lbl">Fechados</div></div>
+    <div class="conv-item" onclick="irParaClientes('Perdido')" title="Ver perdidos"><div class="conv-val" style="color:var(--red)">${perdidos}</div><div class="conv-lbl">Perdidos</div></div>
+    <div class="conv-item" onclick="irParaClientes('Venda Fechada')" title="Ver fechados"><div class="conv-val" style="color:var(--gold)">${taxaConv}%</div><div class="conv-lbl">Conversão</div></div>
   `;
   const el=document.getElementById('dash-atacar');
   if(!atacar.length){el.innerHTML='<div style="color:var(--text3);font-size:13px;padding:20px;text-align:center">Nenhum lead para atacar 🎉</div>';return;}
