@@ -874,7 +874,7 @@ tbody tr:last-child td{border-bottom:none}
         <div class="table-wrap">
           <div class="tbl-head">
             <div class="tbl-filters">
-              <select class="fsel" id="fa-status" onchange="renderAll()"><option value="">Todos os status</option><option>Novo Lead</option><option>Em Atendimento</option><option>Ajustes de viabilidade</option><option>Em Proposta</option><option>Venda Fechada</option><option>Perdido</option></select>
+              <select class="fsel" id="fa-status" onchange="renderAll()"><option value="">Todos os status</option><option>Novo Lead</option><option>Em Atendimento</option><option>Em Proposta</option><option>Venda Fechada</option><option>Perdido</option></select>
               <select class="fsel" id="fa-classif" onchange="renderAll()"><option value="">Todas classificações</option><option>🔥 Muito quente</option><option>🔥 Quente</option><option>🟡 Morno</option><option>❄️ Frio</option></select>
               <select class="fsel" id="fa-prio" onchange="renderAll()"><option value="">Todas prioridades</option><option>🔥 Atacar agora</option><option>🟡 Acompanhar</option><option>❄️ Manter aquecido</option></select>
               <button class="fclear" onclick="clearFilters()">✕</button>
@@ -907,7 +907,6 @@ tbody tr:last-child td{border-bottom:none}
               <span class="fchip" data-fs="Em Proposta" onclick="setChipFilter(this,'Em Proposta')">🟣 Proposta</span>
               <span class="fchip" data-fs="Em Atendimento" onclick="setChipFilter(this,'Em Atendimento')">🟡 Atendimento</span>
               <span class="fchip" data-fs="Novo Lead" onclick="setChipFilter(this,'Novo Lead')">🔵 Novo Lead</span>
-              <span class="fchip" data-fs="Ajustes de viabilidade" onclick="setChipFilter(this,'Ajustes de viabilidade')">🟠 Viabilidade</span>
               <span class="fchip" data-fs="Venda Fechada" onclick="setChipFilter(this,'Venda Fechada')">🟢 Fechado</span>
               <span class="fchip" data-fs="Perdido" onclick="setChipFilter(this,'Perdido')">⚫ Perdido</span>
             </div>
@@ -1231,7 +1230,7 @@ tbody tr:last-child td{border-bottom:none}
       <div class="fg"><label class="fl">Imóvel Origem + Código</label><input type="text" class="fi" id="f-imorig" placeholder="Ex: Bravissima — COD001"></div>
       <div class="fg"><label class="fl">Imóvel Atual + Código</label><input type="text" class="fi" id="f-imatual" placeholder="Ex: Bravissima terreno"></div>
       <div class="fg"><label class="fl">Status</label>
-        <select class="fs" id="f-status" onchange="computeAll()"><option value="">Selecione...</option><option>Novo Lead</option><option>Em Atendimento</option><option>Ajustes de viabilidade</option><option>Em Proposta</option><option>Venda Fechada</option><option>Perdido</option></select>
+        <select class="fs" id="f-status" onchange="computeAll()"><option value="">Selecione...</option><option>Novo Lead</option><option>Em Atendimento</option><option>Em Proposta</option><option>Venda Fechada</option><option>Perdido</option></select>
       </div>
       <div class="fg"><label class="fl">Potencial</label>
         <select class="fs" id="f-pot" onchange="computeAll()"><option value="">Selecione...</option><option>Fraco</option><option>Médio</option><option>Forte</option></select>
@@ -1536,6 +1535,22 @@ async function initData() {
       sbOnline = true;
       DB = cls.map(fromSB);
       VIS = (vis||[]).map(visFromSB);
+
+      // ── Migração de status: "Ajustes de viabilidade" → "Em Proposta" ──
+      const legacyStatus = 'Ajustes de viabilidade';
+      const legacyClients = DB.filter(c => c.status === legacyStatus);
+      if(legacyClients.length > 0) {
+        legacyClients.forEach(c => { c.status = 'Em Proposta'; });
+        // Atualizar no Supabase em paralelo (não bloqueia o carregamento)
+        Promise.all(legacyClients.map(c =>
+          sbFetch(`clientes?id=eq.${c.id}`, {
+            method: 'PATCH',
+            prefer: 'return=minimal',
+            body: JSON.stringify({ status: 'Em Proposta' })
+          })
+        )).catch(() => {});
+      }
+
       localStorage.setItem('crm_v4', JSON.stringify(DB));
       localStorage.setItem('crm_vis', JSON.stringify(VIS));
       // Migração: se tinha dados no localStorage mas não no Supabase, sobe para lá
@@ -1556,6 +1571,10 @@ async function initData() {
     sbOnline = false;
     DB = JSON.parse(localStorage.getItem('crm_v4')||'[]');
     VIS = JSON.parse(localStorage.getItem('crm_vis')||'[]');
+    // Migração offline: corrige status legado no cache local
+    let migOffline = false;
+    DB.forEach(c => { if(c.status === 'Ajustes de viabilidade') { c.status = 'Em Proposta'; migOffline = true; } });
+    if(migOffline) localStorage.setItem('crm_v4', JSON.stringify(DB));
     showToast('Modo offline — dados locais', 'error');
   }
   renderAll(); renderDash(); renderVisitas(); renderDests(); renderCliSel();
@@ -1581,8 +1600,8 @@ const getDias = c => { const b=c.lastEdit||c.createdAt; return b?Math.floor((Dat
 const calcScore = c => {
   const s=c.status||'',d=c.diasSemAtualiz||0,si=c.sinais||[],ct=c.contatos||[];
   if(s==='Perdido')return 0; if(s==='Venda Fechada')return 100;
-  const T={'Novo Lead':35,'Em Atendimento':60,'Ajustes de viabilidade':93,'Em Proposta':95}[s]||95;
-  const B={'Novo Lead':5,'Em Atendimento':22,'Ajustes de viabilidade':60,'Em Proposta':80}[s]||0;
+  const T={'Novo Lead':35,'Em Atendimento':60,'Em Proposta':95}[s]||95;
+  const B={'Novo Lead':5,'Em Atendimento':22,'Em Proposta':80}[s]||0;
   const M=(s==='Em Atendimento'?{'Só olhando':0,'Comparando':2,'Quer comprar':8,'Vai fechar':10}:{'Só olhando':0,'Comparando':2,'Quer comprar':12,'Vai fechar':15})[c.momento]||0;
   let sp=Math.min(10,(si.includes('Perguntou valor final')?2:0)+(si.includes('Perguntou condição negociação')?3:0)+(si.includes('Perguntou documentação')?5:0)+(si.includes('Falou de prazo')?6:0));
   let cp=(ct.includes('Ligação')?2:0)+(ct.includes('Videoconferência')?3:0)+(ct.includes('Visita')?3:0);
@@ -1591,7 +1610,6 @@ const calcScore = c => {
   const pen=d>=40?22:d>=30?14:d>=15?7:0;
   let tr=0;
   if(s==='Em Atendimento'&&(!c.decisor||c.decisor==='Não identificado'))tr+=6;
-  if(s==='Ajustes de viabilidade'){const nd=!c.decisor||c.decisor==='Não identificado';const ns=!si.includes('Perguntou documentação')&&!si.includes('Falou de prazo');const nc=!ct.includes('Videoconferência')&&!ct.includes('Visita');if(nd||(ns&&nc))tr+=15;}
   if(s==='Em Proposta'&&!si.includes('Perguntou documentação')&&!si.includes('Falou de prazo'))tr+=10;
   return Math.max(0,Math.min(T,B+M+sp+cp+pp+(c.motivo?2:0)+(c.objecao?2:0)+dec-pen-tr));
 };
@@ -1600,7 +1618,6 @@ const calcClassif=(c,sc)=>{
   if(s==='Venda Fechada')return'🟢 Fechado';if(s==='Perdido')return'⚫ Perdido';
   const nd=!c.decisor||c.decisor==='Não identificado';
   if(s==='Em Proposta'&&sc>=90)return'🔥 Muito quente';
-  if(s==='Ajustes de viabilidade'&&sc>=90&&!nd&&(si.includes('Perguntou documentação')||si.includes('Falou de prazo')||ct.includes('Videoconferência')||ct.includes('Visita')))return'🔥 Muito quente';
   if(sc>=70)return'🔥 Quente';if(sc>=35)return'🟡 Morno';return'❄️ Frio';
 };
 const calcPrio=(c,d)=>{
@@ -1618,7 +1635,7 @@ const initials=n=>(n||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCa
 const avClr=n=>['#7c3aed','#0891b2','#059669','#d97706','#dc2626','#0284c7','#be185d'][(n||'').charCodeAt(0)%7];
 
 // Badges
-const bSt=s=>({'Novo Lead':'b-snovo','Em Atendimento':'b-satend','Ajustes de viabilidade':'b-sviab','Em Proposta':'b-sprop','Venda Fechada':'b-svenda','Perdido':'b-sperd'}[s]||'');
+const bSt=s=>({'Novo Lead':'b-snovo','Em Atendimento':'b-satend','Em Proposta':'b-sprop','Venda Fechada':'b-svenda','Perdido':'b-sperd'}[s]||'');
 const bCl=v=>({'🔥 Muito quente':'b-mquente','🔥 Quente':'b-quente','🟡 Morno':'b-morno','❄️ Frio':'b-frio','🟢 Fechado':'b-fechado','⚫ Perdido':'b-perdido'}[v]||'');
 const bPr=v=>({'🔥 Atacar agora':'b-atacar','🟡 Acompanhar':'b-acomp','❄️ Manter aquecido':'b-manter','🟢 Fechado':'b-fechado','⚫ Perdido':'b-perdido'}[v]||'');
 const bGr=v=>({'✅ OK':'b-ok','🟡 15+ dias':'b-w15','⚠️ 30+ dias':'b-w30','🚨 40+ dias':'b-w40'}[v]||'');
@@ -1671,7 +1688,6 @@ function renderB(){
   const COLS=[
     {key:'Novo Lead',label:'NOVO LEAD',cls:'col-nl'},
     {key:'Em Atendimento',label:'ATENDIMENTO',cls:'col-ea'},
-    {key:'Ajustes de viabilidade',label:'VIABILIDADE',cls:'col-av'},
     {key:'Em Proposta',label:'EM PROPOSTA',cls:'col-ep'},
     {key:'Venda Fechada',label:'FECHADO',cls:'col-vf'},
   ];
