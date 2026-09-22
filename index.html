@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230e1016'/%3E%3Ctext x='96' y='130' font-family='serif' font-size='110' text-anchor='middle' fill='%23e2b84b'%3E🏠%3C/text%3E%3C/svg%3E">
 <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Realtor%20Pro%20CRM%22%2C%22short_name%22%3A%22Realtor%20Pro%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230e1016%22%2C%22theme_color%22%3A%22%230e1016%22%2C%22orientation%22%3A%22portrait%22%7D">
 <title>Realtor Pro CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Playfair+Display:wght@500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -689,8 +690,8 @@ tbody tr:last-child td{border-bottom:none}
       <div class="lg-sub">Sistema de Gestão Imobiliária</div>
     </div>
     <div class="login-field">
-      <label>Login</label>
-      <input type="text" id="login-user" placeholder="Digite seu login" autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      <label>E-mail</label>
+      <input type="email" id="login-user" placeholder="Digite seu e-mail" autocomplete="email" autocapitalize="none" spellcheck="false" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
     </div>
     <div class="login-field">
       <label>Senha</label>
@@ -712,14 +713,10 @@ tbody tr:last-child td{border-bottom:none}
     <div style="padding:20px;overflow-y:auto;max-height:70vh">
       <input type="hidden" id="mu-id">
       <div style="margin-bottom:16px;padding:10px 14px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text3)">
-        <strong style="color:var(--gold)">Campos obrigatórios</strong> marcados com * · Os demais são opcionais
+        <strong style="color:var(--gold)">Somente edição.</strong> Para criar um usuário novo: acesse o painel Supabase → Authentication → Users → Add user. O perfil é criado automaticamente.
       </div>
       <div class="form-row-2" style="margin-bottom:12px">
         <div class="login-field" style="margin:0"><label>Nome Completo *</label><input type="text" id="mu-nome" placeholder="Ex: Ana Silva"></div>
-        <div class="login-field" style="margin:0"><label>Login *</label><input type="text" id="mu-login" placeholder="Ex: anasilva"></div>
-      </div>
-      <div class="form-row-2" style="margin-bottom:12px">
-        <div class="login-field" style="margin:0"><label>Senha *</label><input type="password" id="mu-senha" placeholder="Mínimo 6 caracteres"></div>
         <div class="login-field" style="margin:0"><label>Nível de Acesso *</label>
           <select id="mu-nivel" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none">
             <option value="corretor">Corretor</option>
@@ -729,17 +726,8 @@ tbody tr:last-child td{border-bottom:none}
         </div>
       </div>
       <div class="form-row-2" style="margin-bottom:12px">
-        <div class="login-field" style="margin:0"><label>E-mail</label><input type="email" id="mu-email" placeholder="email@exemplo.com"></div>
         <div class="login-field" style="margin:0"><label>Telefone</label><input type="text" id="mu-tel" placeholder="48 9 9999-9999"></div>
-      </div>
-      <div class="form-row-2" style="margin-bottom:12px">
         <div class="login-field" style="margin:0"><label>CRECI</label><input type="text" id="mu-creci" placeholder="Ex: CRECI/SC 12345-F"></div>
-        <div class="login-field" style="margin:0"><label>Tipo Pessoa</label>
-          <select id="mu-tipopessoa" onchange="updateCpfCnpjLabel()" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none">
-            <option value="Física">Física</option>
-            <option value="Jurídica">Jurídica</option>
-          </select>
-        </div>
       </div>
       <div class="form-row-2" style="margin-bottom:12px">
         <div class="login-field" style="margin:0"><label id="mu-cpfcnpj-lbl">CPF</label><input type="text" id="mu-cpfcnpj" placeholder="000.000.000-00"></div>
@@ -970,7 +958,7 @@ tbody tr:last-child td{border-bottom:none}
           </div>
           <div class="vbtns">
             <button class="vbtn" onclick="agendarVisita()">📅 Abrir Google Calendar</button>
-            <button class="vbtn-sec" onclick="salvarVisita()">💾 Salvar localmente</button>
+            <button class="vbtn-sec" onclick="salvarVisita()">💾 Salvar visita</button>
           </div>
         </div>
         <div class="dash-sub" style="margin-bottom:10px">Visitas Agendadas</div>
@@ -1306,27 +1294,50 @@ tbody tr:last-child td{border-bottom:none}
 const SB_URL = 'https://acxkubuwfwdxmkrykbds.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjeGt1YnV3ZndkeG1rcnlrYmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODAyMjUsImV4cCI6MjA4ODY1NjIyNX0.4ouBTgDZ-PE7ugHtMOVIqaPpeAbLEjVdz8v3Q3cMlFo';
 
-const sbFetch = async (path, opts={}) => {
-  const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
-    ...opts,
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer||'return=representation',
-      ...(opts.headers||{})
-    }
-  });
-  if(!r.ok){ const e=await r.text(); console.error('SB error:',e); sbOnline=false; if(typeof atualizarIndicador==='function') atualizarIndicador(); return null; }
-  sbOnline=true; if(typeof atualizarIndicador==='function') atualizarIndicador();
-  const ct=r.headers.get('content-type')||'';
-  return ct.includes('json') ? r.json() : null;
-};
+// ======= SUPABASE SDK CLIENT =======
+const _sb = window.supabase.createClient(SB_URL, SB_KEY);
+let _sbSession = null;   // sessão JWT atual (atualizada pelo onAuthStateChange)
+let currentUser    = null;
+let currentProfile = null;
+
+// Busca o profile do usuário autenticado
+async function loadProfile(userId) {
+  try {
+    const { data, error } = await _sb.from('profiles').select('*').eq('id', userId).single();
+    if(error) { console.error('loadProfile:', error.message); return null; }
+    return data;
+  } catch(e) { console.error('loadProfile:', e); return null; }
+}
+
+// Constrói o objeto de sessão local a partir de user + profile
+function buildSessFromProfile(user, profile) {
+  return {
+    id:               user.id,
+    nome:             profile?.nome  || user.email,
+    nivel:            profile?.nivel || 'corretor',
+    gerente_id:       profile?.gerente_id       || null,
+    permissoes:       profile?.permissoes        || { deletar:true, exportar:true, email_massa:true, imoveis:true },
+    creci:            profile?.creci             || '',
+    email:            user.email                 || '',
+    telefone:         profile?.telefone          || '',
+    telegram_chat_id: profile?.telegram_chat_id  || null,
+  };
+}
+
+// Listener de mudança de sessão (mantém _sbSession e currentUser sempre atualizados)
+_sb.auth.onAuthStateChange((event, session) => {
+  _sbSession  = session;
+  currentUser = session?.user || null;
+  if(event === 'SIGNED_OUT') {
+    currentProfile = null;
+  }
+});
+
 
 // Converte snake_case Supabase → camelCase CRM
 const fromSB = row => ({
   id: row.id,
-  data: row.data||'',
+  data: row.data_lead||'',
   nome: row.nome||'',
   telefone: row.telefone||'',
   email: row.email||'',
@@ -1344,13 +1355,14 @@ const fromSB = row => ({
   local: row.local||'',
   obs: row.obs||'',
   createdAt: row.created_at||new Date().toISOString(),
-  lastEdit: row.last_edit||row.created_at||new Date().toISOString()
+  lastEdit: row.updated_at||row.created_at||new Date().toISOString()
 });
 
 // Converte camelCase CRM → snake_case Supabase
 const toSB = c => ({
   id: c.id,
-  data: c.data||null,
+  user_id: currentUser?.id || null,
+  data_lead: c.data||null,
   nome: c.nome,
   telefone: c.telefone||null,
   email: c.email||null,
@@ -1367,13 +1379,13 @@ const toSB = c => ({
   contatos: c.contatos||[],
   local: c.local||null,
   obs: c.obs||null,
-  last_edit: c.lastEdit||new Date().toISOString(),
   created_at: c.createdAt||new Date().toISOString()
 });
 
 // Converte visita para Supabase
 const visToSB = v => ({
   id: v.id,
+  user_id: currentUser?.id || null,
   cliente_id: v.clienteId||null,
   cliente_nome: v.clienteNome||'',
   imovel: v.imovel||null,
@@ -1400,50 +1412,29 @@ let curLayout = localStorage.getItem('crm_layout')||'c';
 let curPalette = localStorage.getItem('crm_palette')||'dark';
 let sbOnline = false;
 
-// Save: persiste no Supabase (online) ou localStorage (offline)
-const saveDB = async () => {
-  localStorage.setItem('crm_v4', JSON.stringify(DB)); // sempre salva local como cache
-};
-const saveVis = async () => {
-  localStorage.setItem('crm_vis', JSON.stringify(VIS));
-};
 
 // ======= SUPABASE CRUD =======
 const sbSaveClient = async (c) => {
-  if(!sbOnline) return;
-  const payload = toSB(c);
-  // Adicionar corretor_id ao salvar
-  const sess = getSession();
-  if(sess && !payload.corretor_id) {
-    payload.corretor_id   = sess.id;
-    payload.corretor_nome = sess.nome;
-  }
-  await sbFetch('clientes?on_conflict=id', {
-    method: 'POST',
-    prefer: 'return=minimal',
-    headers: {'Prefer':'resolution=merge-duplicates,return=minimal'},
-    body: JSON.stringify(payload)
-  });
+  const { error } = await _sb.from('clientes').upsert(toSB(c), { onConflict: 'id' });
+  if(error) { console.error('sbSaveClient:', error.message); sbOnline=false; if(typeof atualizarIndicador==='function') atualizarIndicador(); return error; }
+  sbOnline=true; if(typeof atualizarIndicador==='function') atualizarIndicador();
+  return null;
 };
 
 const sbDeleteClient = async (id) => {
-  if(!sbOnline) return;
-  await sbFetch(`clientes?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+  const { error } = await _sb.from('clientes').delete().eq('id', id);
+  if(error) console.error('sbDeleteClient:', error.message);
 };
 
 const sbSaveVis = async (v) => {
-  if(!sbOnline) return;
-  await sbFetch('visitas?on_conflict=id', {
-    method: 'POST',
-    prefer: 'return=minimal',
-    headers: {'Prefer':'resolution=merge-duplicates,return=minimal'},
-    body: JSON.stringify(visToSB(v))
-  });
+  const { error } = await _sb.from('visitas').upsert(visToSB(v), { onConflict: 'id' });
+  if(error) { console.error('sbSaveVis:', error.message); return error; }
+  return null;
 };
 
 const sbDeleteVis = async (id) => {
-  if(!sbOnline) return;
-  await sbFetch(`visitas?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+  const { error } = await _sb.from('visitas').delete().eq('id', id);
+  if(error) console.error('sbDeleteVis:', error.message);
 };
 
 // ======= INIT: Load from Supabase =======
@@ -1525,68 +1516,41 @@ function atualizarIndicador() {
 }
 
 async function initData() {
-  // showToast('Carregando dados...', '');
   try {
-    const [cls, vis] = await Promise.all([
-      sbFetch(buildClientesQuery()),
-      sbFetch('visitas?order=created_at.asc')
+    const [{ data: cls, error: clsErr }, { data: vis, error: visErr }] = await Promise.all([
+      _sb.from('clientes').select('*').order('created_at', { ascending: true }),
+      _sb.from('visitas').select('*').order('created_at', { ascending: true })
     ]);
-    if(cls !== null) {
-      sbOnline = true;
-      DB = cls.map(fromSB);
-      VIS = (vis||[]).map(visFromSB);
 
-      // ── Migração de status: "Ajustes de viabilidade" → "Em Proposta" ──
-      const legacyStatus = 'Ajustes de viabilidade';
-      const legacyClients = DB.filter(c => c.status === legacyStatus);
-      if(legacyClients.length > 0) {
-        legacyClients.forEach(c => { c.status = 'Em Proposta'; });
-        // Atualizar no Supabase em paralelo (não bloqueia o carregamento)
-        Promise.all(legacyClients.map(c =>
-          sbFetch(`clientes?id=eq.${c.id}`, {
-            method: 'PATCH',
-            prefer: 'return=minimal',
-            body: JSON.stringify({ status: 'Em Proposta' })
-          })
-        )).catch(() => {});
-      }
+    if(clsErr) throw clsErr;
 
-      localStorage.setItem('crm_v4', JSON.stringify(DB));
-      localStorage.setItem('crm_vis', JSON.stringify(VIS));
-      // Migração: se tinha dados no localStorage mas não no Supabase, sobe para lá
-      const localDB = JSON.parse(localStorage.getItem('crm_v4_backup')||'[]');
-      if(localDB.length > 0 && DB.length === 0) {
-        showToast(`Migrando ${localDB.length} clientes para nuvem...`, '');
-        for(const c of localDB) { await sbSaveClient(c); }
-        DB = localDB;
-        localStorage.removeItem('crm_v4_backup');
-        showToast('Migração concluída! ✅', 'success');
-      } else {
-        // toast de clientes carregados removido
-      }
-    } else {
-      throw new Error('offline');
+    sbOnline = true;
+    DB  = (cls||[]).map(fromSB);
+    VIS = (vis||[]).map(visFromSB);
+
+    // Migração de status legado: "Ajustes de viabilidade" → "Em Proposta"
+    const legacyClients = DB.filter(c => c.status === 'Ajustes de viabilidade');
+    if(legacyClients.length > 0) {
+      legacyClients.forEach(c => { c.status = 'Em Proposta'; });
+      Promise.all(legacyClients.map(c =>
+        _sb.from('clientes').update({ status: 'Em Proposta' }).eq('id', c.id)
+      )).catch(() => {});
     }
+
   } catch(e) {
     sbOnline = false;
-    DB = JSON.parse(localStorage.getItem('crm_v4')||'[]');
-    VIS = JSON.parse(localStorage.getItem('crm_vis')||'[]');
-    // Migração offline: corrige status legado no cache local
-    let migOffline = false;
-    DB.forEach(c => { if(c.status === 'Ajustes de viabilidade') { c.status = 'Em Proposta'; migOffline = true; } });
-    if(migOffline) localStorage.setItem('crm_v4', JSON.stringify(DB));
-    showToast('Modo offline — dados locais', 'error');
+    console.error('initData:', e.message || e);
+    showToast('Erro ao carregar dados. Verifique a conexão.', 'error');
   }
   renderAll(); renderDash(); renderVisitas(); renderDests(); renderCliSel();
   if(DB.length && curLayout==='c' && window.innerWidth>700) selectClient(DB[0].id);
   await loadImoveis();
-  // Atualizar indicador
   atualizarIndicador();
   clearInterval(window._sbStatusInterval);
   window._sbStatusInterval = setInterval(async () => {
     try {
       const r = await fetch(`${SB_URL}/rest/v1/clientes?limit=1`, {
-        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(_sbSession?.access_token||SB_KEY)}
       });
       sbOnline = r.ok;
     } catch(e) { sbOnline = false; }
@@ -1856,7 +1820,7 @@ async function deleteClient(id){
     `Tem certeza que deseja excluir "${c?c.nome:'este cliente'}"? Esta ação não pode ser desfeita.`,
     '👤',
     async () => {
-      DB=DB.filter(c=>c.id!==id); saveDB(); await sbDeleteClient(id); activeClient=null;
+      DB=DB.filter(c=>c.id!==id); await sbDeleteClient(id); activeClient=null;
       document.getElementById('detail-content').innerHTML='<div class="empty-detail"><div style="font-size:36px">🗑</div><div>Removido</div></div>';
       if(window.innerWidth<=700) closeDetail();
       renderAll(); renderDash(); renderDests(); renderCliSel();
@@ -1943,8 +1907,8 @@ function renderDash(){
 function renderCliSel(){
   const sel=document.getElementById('v-cliente');
   const pdest=document.getElementById('preview-dest');
-  sel.innerHTML='<option value="">Selecione...</option>'+DB.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
-  pdest.innerHTML='<option value="">Selecione...</option>'+DB.filter(c=>c.email).map(c=>`<option value="${c.id}">${c.nome} — ${c.email}</option>`).join('');
+  if(sel) sel.innerHTML='<option value="">Selecione...</option>'+DB.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+  if(pdest) pdest.innerHTML='<option value="">Selecione...</option>'+DB.filter(c=>c.email).map(c=>`<option value="${c.id}">${c.nome} — ${c.email}</option>`).join('');
 }
 
 function agendarVisita(){
@@ -1966,9 +1930,10 @@ async function salvarVisita(silent=false){
   const cid=document.getElementById('v-cliente').value, dv=document.getElementById('v-data').value;
   if(!cid||!dv){if(!silent)showToast('Preencha cliente e data','error');return;}
   const c=DB.find(x=>x.id===cid);
-  const v={id:Date.now().toString(),clienteId:cid,clienteNome:c.nome,imovel:document.getElementById('v-imovel').value.trim()||c.imovelAtual||'',data:dv,endereco:document.getElementById('v-end').value.trim(),obs:document.getElementById('v-obs').value.trim()};
+  const v={id:crypto.randomUUID(),clienteId:cid,clienteNome:c.nome,imovel:document.getElementById('v-imovel').value.trim()||c.imovelAtual||'',data:dv,endereco:document.getElementById('v-end').value.trim(),obs:document.getElementById('v-obs').value.trim()};
   VIS.push(v);
-  saveVis(); await sbSaveVis(v);
+  const visErr=await sbSaveVis(v);
+  if(visErr){ VIS=VIS.filter(x=>x.id!==v.id); renderVisitas(); showToast('❌ Erro ao salvar visita: '+visErr.message,'error'); return; }
   ['v-cliente','v-imovel','v-end','v-obs'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('v-data').value='';
   renderVisitas(); if(!silent) showToast('Visita salva!','success');
@@ -2005,7 +1970,7 @@ function renderVisitas(){
 
 async function deleteVis(id){
   showConfirm('Excluir visita?','Tem certeza? Esta ação não pode ser desfeita.','📅', async ()=>{
-    VIS=VIS.filter(v=>v.id!==id);saveVis();await sbDeleteVis(id);renderVisitas();
+    VIS=VIS.filter(v=>v.id!==id);await sbDeleteVis(id);renderVisitas();
     showToast('Visita removida','success');
   });
 }
@@ -2366,10 +2331,11 @@ async function saveClient(){
   const nome=document.getElementById('f-nome').value.trim();
   if(!nome) nome = 'Lead sem nome';
   const now=new Date().toISOString();
-  const data={id:editId||Date.now().toString(),data:document.getElementById('f-data').value,nome,telefone:document.getElementById('f-tel').value.trim(),email:document.getElementById('f-email').value.trim(),origem:document.getElementById('f-origem').value,imovelOrigem:document.getElementById('f-imorig').value.trim(),imovelAtual:document.getElementById('f-imatual').value.trim(),status:document.getElementById('f-status').value,potencial:document.getElementById('f-pot').value,momento:document.getElementById('f-momento').value,motivo:document.getElementById('f-motivo').value,objecao:document.getElementById('f-objecao').value,decisor:document.getElementById('f-decisor').value,sinais:getChips('g-sinal'),contatos:getChips('g-contato'),local:getLocal(),obs:document.getElementById('f-obs').value.trim(),lastEdit:now,createdAt:editId?(DB.find(x=>x.id===editId)||{}).createdAt||now:now};
+  const data={id:editId||crypto.randomUUID(),data:document.getElementById('f-data').value,nome,telefone:document.getElementById('f-tel').value.trim(),email:document.getElementById('f-email').value.trim(),origem:document.getElementById('f-origem').value,imovelOrigem:document.getElementById('f-imorig').value.trim(),imovelAtual:document.getElementById('f-imatual').value.trim(),status:document.getElementById('f-status').value,potencial:document.getElementById('f-pot').value,momento:document.getElementById('f-momento').value,motivo:document.getElementById('f-motivo').value,objecao:document.getElementById('f-objecao').value,decisor:document.getElementById('f-decisor').value,sinais:getChips('g-sinal'),contatos:getChips('g-contato'),local:getLocal(),obs:document.getElementById('f-obs').value.trim(),lastEdit:now,createdAt:editId?(DB.find(x=>x.id===editId)||{}).createdAt||now:now};
+  const originalDB=[...DB];
   if(editId)DB=DB.map(c=>c.id===editId?data:c);else DB.push(data);
-  saveDB();
-  await sbSaveClient(data);
+  const saveErr=await sbSaveClient(data);
+  if(saveErr){ DB=originalDB; showToast('❌ Erro ao salvar: '+saveErr.message,'error'); return; }
   closeModal();renderAll();renderDash();renderDests();renderCliSel();
   if(curLayout==='c') selectClient(data.id);
   showToast(editId?'Atualizado!':'Cliente salvo!','success');
@@ -2378,7 +2344,7 @@ async function saveClient(){
 // ======= NAVIGATION =======
 function goTo(n){
   // Redirecionar para admin separado
-  if(n==='admin'){const s=getSession();if(!s||s.nivel!=='admin')return; goToAdmin(); return;}
+  if(n==='admin'){if(!currentProfile||currentProfile.nivel!=='admin')return; goToAdmin(); return;}
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   // Esconder seção admin
   const secAdmin=document.getElementById('sec-admin');
@@ -2755,35 +2721,35 @@ const HIST_TYPES = [
 
 let histSelType = 'ligacao';
 
-const getInteractions = (clientId) => {
-  const all = JSON.parse(localStorage.getItem('crm_hist') || '{}');
-  return all[clientId] || [];
+const interactionFromDB = row => ({ id: row.id, type: row.tipo, note: row.nota || '', date: row.created_at });
+
+const getInteractions = async (clientId) => {
+  const { data, error } = await _sb.from('interacoes').select('*').eq('cliente_id', clientId).order('created_at', { ascending: false });
+  if(error) { console.error('getInteractions:', error.message); return []; }
+  return (data || []).map(interactionFromDB);
 };
 
-const saveInteraction = (clientId, type, note) => {
-  const all = JSON.parse(localStorage.getItem('crm_hist') || '{}');
-  if(!all[clientId]) all[clientId] = [];
-  const item = {
-    id: Date.now().toString(),
-    type, note: note.trim(),
-    date: new Date().toISOString()
-  };
-  all[clientId].unshift(item);
-  localStorage.setItem('crm_hist', JSON.stringify(all));
-
-  // Atualizar lastEdit do cliente
+const saveInteraction = async (clientId, type, note) => {
+  const now = new Date().toISOString();
+  const { data, error } = await _sb.from('interacoes').insert({
+    id: crypto.randomUUID(),
+    user_id: currentUser.id,
+    cliente_id: clientId,
+    tipo: type,
+    nota: note.trim() || null,
+    created_at: now
+  }).select().single();
+  if(error) { console.error('saveInteraction:', error.message); return null; }
+  // Atualizar lastEdit do cliente em memória (UI)
   const ci = DB.findIndex(x => x.id === clientId);
-  if(ci >= 0) { DB[ci].lastEdit = item.date; saveDB(); }
-
-  return item;
+  if(ci >= 0) DB[ci].lastEdit = now;
+  return interactionFromDB(data);
 };
 
-const deleteInteraction = (clientId, itemId) => {
-  const all = JSON.parse(localStorage.getItem('crm_hist') || '{}');
-  if(all[clientId]) {
-    all[clientId] = all[clientId].filter(n => n.id !== itemId);
-    localStorage.setItem('crm_hist', JSON.stringify(all));
-  }
+const deleteInteraction = async (clientId, itemId) => {
+  const { error } = await _sb.from('interacoes').delete().eq('id', itemId);
+  if(error) { console.error('deleteInteraction:', error.message); return error; }
+  return null;
 };
 
 const getHistType = (key) => HIST_TYPES.find(t => t.key === key) || HIST_TYPES[5];
@@ -2809,25 +2775,27 @@ function selectHistType(type) {
   });
 }
 
-function addInteraction(clientId) {
+async function addInteraction(clientId) {
   const noteEl = document.getElementById('hist-note-' + clientId);
   const note = noteEl ? noteEl.value.trim() : '';
-  saveInteraction(clientId, histSelType, note);
+  const saved = await saveInteraction(clientId, histSelType, note);
+  if(!saved) { showToast('❌ Erro ao registrar interação.', 'error'); return; }
   const form = document.getElementById('hist-form-' + clientId);
   if(form) form.classList.remove('open');
-  renderInteractions(clientId);
+  await renderInteractions(clientId);
   showToast('Interação registrada! ✅', 'success');
 }
 
-function removeInteraction(clientId, itemId) {
-  deleteInteraction(clientId, itemId);
-  renderInteractions(clientId);
+async function removeInteraction(clientId, itemId) {
+  const err = await deleteInteraction(clientId, itemId);
+  if(err) { showToast('❌ Erro ao excluir interação.', 'error'); return; }
+  await renderInteractions(clientId);
 }
 
-function renderInteractions(clientId) {
+async function renderInteractions(clientId) {
   const container = document.getElementById('hist-list-' + clientId);
   if(!container) return;
-  const items = getInteractions(clientId);
+  const items = await getInteractions(clientId);
   if(!items.length) {
     container.innerHTML = '<div class="hist-empty">Nenhuma interação registrada ainda.</div>';
     return;
@@ -2852,30 +2820,30 @@ function renderInteractions(clientId) {
 }
 
 // ======= NOTAS RÁPIDAS =======
-const getNotes = (clientId) => {
-  const all = JSON.parse(localStorage.getItem('crm_notas') || '{}');
-  return all[clientId] || [];
+const noteFromDB = row => ({ id: row.id, text: row.texto, date: row.created_at });
+
+const getNotes = async (clientId) => {
+  const { data, error } = await _sb.from('notas').select('*').eq('cliente_id', clientId).order('created_at', { ascending: false });
+  if(error) { console.error('getNotes:', error.message); return []; }
+  return (data || []).map(noteFromDB);
 };
 
-const saveNote = (clientId, text) => {
-  const all = JSON.parse(localStorage.getItem('crm_notas') || '{}');
-  if(!all[clientId]) all[clientId] = [];
-  const nota = {
-    id: Date.now().toString(),
-    text: text.trim(),
-    date: new Date().toISOString()
-  };
-  all[clientId].unshift(nota); // mais recente primeiro
-  localStorage.setItem('crm_notas', JSON.stringify(all));
-  return nota;
+const saveNote = async (clientId, text) => {
+  const { data, error } = await _sb.from('notas').insert({
+    id: crypto.randomUUID(),
+    user_id: currentUser.id,
+    cliente_id: clientId,
+    texto: text.trim(),
+    created_at: new Date().toISOString()
+  }).select().single();
+  if(error) { console.error('saveNote:', error.message); return null; }
+  return noteFromDB(data);
 };
 
-const deleteNote = (clientId, noteId) => {
-  const all = JSON.parse(localStorage.getItem('crm_notas') || '{}');
-  if(all[clientId]) {
-    all[clientId] = all[clientId].filter(n => n.id !== noteId);
-    localStorage.setItem('crm_notas', JSON.stringify(all));
-  }
+const deleteNote = async (clientId, noteId) => {
+  const { error } = await _sb.from('notas').delete().eq('id', noteId);
+  if(error) { console.error('deleteNote:', error.message); return error; }
+  return null;
 };
 
 const fmtNoteDate = (iso) => {
@@ -2884,10 +2852,10 @@ const fmtNoteDate = (iso) => {
     ' às ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
 };
 
-function renderNotes(clientId) {
-  const notas = getNotes(clientId);
+async function renderNotes(clientId) {
   const container = document.getElementById('nota-list-' + clientId);
   if(!container) return;
+  const notas = await getNotes(clientId);
   if(!notas.length) {
     container.innerHTML = '<div class="nota-empty">Nenhuma nota ainda. Adicione a primeira acima ☝️</div>';
     return;
@@ -2903,20 +2871,22 @@ function renderNotes(clientId) {
   `).join('');
 }
 
-function addNote(clientId) {
+async function addNote(clientId) {
   const el = document.getElementById('nota-input-' + clientId);
   if(!el) return;
   const text = el.value.trim();
   if(!text) { el.focus(); return; }
-  saveNote(clientId, text);
+  const saved = await saveNote(clientId, text);
+  if(!saved) { showToast('❌ Erro ao salvar nota.', 'error'); return; }
   el.value = '';
-  renderNotes(clientId);
+  await renderNotes(clientId);
   showToast('Nota salva! 📝', 'success');
 }
 
-function removeNote(clientId, noteId) {
-  deleteNote(clientId, noteId);
-  renderNotes(clientId);
+async function removeNote(clientId, noteId) {
+  const err = await deleteNote(clientId, noteId);
+  if(err) { showToast('❌ Erro ao excluir nota.', 'error'); return; }
+  await renderNotes(clientId);
 }
 
 // Enter + Ctrl/Cmd para salvar nota rapidamente
@@ -3004,62 +2974,55 @@ document.addEventListener('keydown', e => {
 let IMOVEIS = [];
 let editImovelId = null;
 
-const saveImoveis = async () => {
-  localStorage.setItem('crm_imoveis', JSON.stringify(IMOVEIS));
-};
 
 const sbSaveImovel = async (im) => {
-  if(!sbOnline) return;
-  await sbFetch('imoveis?on_conflict=id', {
-    method: 'POST',
-    prefer: 'return=minimal',
-    headers: {'Prefer':'resolution=merge-duplicates,return=minimal'},
-    body: JSON.stringify({
-      id: im.id,
-      nome: im.nome||null,
-      tipo: im.tipo||null,
-      unidade: im.unidade||null,
-      torre: im.torre||null,
-      codigo: im.codigo||null,
-      bairro: im.bairro||null,
-      valor: im.valor||null,
-      dorms: im.dorms||null,
-      banheiros: im.banheiros||null,
-      suites: im.suites||null,
-      vagas: im.vagas||null,
-      permuta: im.permuta||null,
-      parcelamento: im.parcelamento||null,
-      mobiliado: im.mobiliado||null,
-      origem_prop: im.origemProp||null,
-      obs: im.obs||null,
-      created_at: im.createdAt||new Date().toISOString()
-    })
-  });
+  const payload = {
+    id: im.id,
+    user_id: currentUser?.id || null,
+    nome: im.nome||null,
+    tipo: im.tipo||null,
+    unidade: im.unidade||null,
+    torre: im.torre||null,
+    codigo: im.codigo||null,
+    bairro: im.bairro||null,
+    valor: im.valor||null,
+    dorms: im.dorms||null,
+    banheiros: im.banheiros||null,
+    suites: im.suites||null,
+    vagas: im.vagas||null,
+    permuta: im.permuta||null,
+    parcelamento: im.parcelamento||null,
+    mobiliado: im.mobiliado||null,
+    origem_prop: im.origemProp||null,
+    obs: im.obs||null,
+    created_at: im.createdAt||new Date().toISOString()
+  };
+  const { error } = await _sb.from('imoveis').upsert(payload, { onConflict: 'id' });
+  if(error) { console.error('sbSaveImovel:', error.message); return error; }
+  return null;
 };
 
 const sbDeleteImovel = async (id) => {
-  if(!sbOnline) return;
-  await sbFetch(`imoveis?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+  const { error } = await _sb.from('imoveis').delete().eq('id', id);
+  if(error) console.error('sbDeleteImovel:', error.message);
 };
 
 async function loadImoveis() {
-  if(sbOnline) {
-    const data = await sbFetch('imoveis?order=created_at.desc');
-    if(data !== null) {
-      IMOVEIS = data.map(r => ({
-        id: r.id, nome: r.nome||'', tipo: r.tipo||'', unidade: r.unidade||'',
-        torre: r.torre||'', codigo: r.codigo||'', bairro: r.bairro||'',
-        valor: r.valor||'', dorms: r.dorms||'', banheiros: r.banheiros||'',
-        suites: r.suites||'', vagas: r.vagas||'', permuta: r.permuta||'',
-        parcelamento: r.parcelamento||'', mobiliado: r.mobiliado||'',
-        origemProp: r.origem_prop||'', obs: r.obs||'',
-        createdAt: r.created_at||new Date().toISOString()
-      }));
-      localStorage.setItem('crm_imoveis', JSON.stringify(IMOVEIS));
-      return;
-    }
+  const { data, error } = await _sb.from('imoveis').select('*').order('created_at', { ascending: false });
+  if(!error && data) {
+    IMOVEIS = data.map(r => ({
+      id: r.id, nome: r.nome||'', tipo: r.tipo||'', unidade: r.unidade||'',
+      torre: r.torre||'', codigo: r.codigo||'', bairro: r.bairro||'',
+      valor: r.valor||'', dorms: r.dorms||'', banheiros: r.banheiros||'',
+      suites: r.suites||'', vagas: r.vagas||'', permuta: r.permuta||'',
+      parcelamento: r.parcelamento||'', mobiliado: r.mobiliado||'',
+      origemProp: r.origem_prop||'', obs: r.obs||'',
+      createdAt: r.created_at||new Date().toISOString()
+    }));
+    sbOnline = true;
+  } else {
+    if(error) console.error('loadImoveis:', error.message);
   }
-  IMOVEIS = JSON.parse(localStorage.getItem('crm_imoveis')||'[]');
 }
 
 function renderImoveis() {
@@ -3142,7 +3105,7 @@ async function saveImovel() {
   if(!nome) nome = 'Imóvel sem nome';
   const now = new Date().toISOString();
   const im = {
-    id: editImovelId||Date.now().toString(),
+    id: editImovelId||crypto.randomUUID(),
     nome, tipo: document.getElementById('im-tipo').value,
     unidade: document.getElementById('im-unidade').value.trim(),
     torre: document.getElementById('im-torre').value.trim(),
@@ -3160,10 +3123,11 @@ async function saveImovel() {
     obs: document.getElementById('im-obs').value.trim(),
     createdAt: editImovelId ? (IMOVEIS.find(x=>x.id===editImovelId)||{}).createdAt||now : now
   };
+  const originalImoveis=[...IMOVEIS];
   if(editImovelId) IMOVEIS = IMOVEIS.map(x=>x.id===editImovelId?im:x);
   else IMOVEIS.push(im);
-  saveImoveis();
-  await sbSaveImovel(im);
+  const imErr=await sbSaveImovel(im);
+  if(imErr){ IMOVEIS=originalImoveis; showToast('❌ Erro ao salvar imóvel: '+imErr.message,'error'); return; }
   closeImovelModal();
   renderImoveis();
   showToast(editImovelId?'Imóvel atualizado!':'Imóvel salvo!','success');
@@ -3177,7 +3141,7 @@ async function deleteImovel(id) {
     '🏠',
     async () => {
       IMOVEIS = IMOVEIS.filter(x=>x.id!==id);
-      saveImoveis(); await sbDeleteImovel(id); renderImoveis();
+      await sbDeleteImovel(id); renderImoveis();
       showToast('Imóvel deletado ✅','success');
     }
   );
@@ -3190,44 +3154,15 @@ document.getElementById('imovel-modal-overlay').addEventListener('click', e => {
 
 // ======= ETAPA 12 — AUTENTICAÇÃO E MULTI-USUÁRIO =======
 
-// Sessão — usa sessionStorage com fallback para localStorage (iOS PWA / modo privado)
-function _sessStore() {
-  try { sessionStorage.setItem('_t','1'); sessionStorage.removeItem('_t'); return sessionStorage; }
-  catch(e) { return localStorage; }
-}
-function getSession() {
-  try {
-    const s = _sessStore().getItem('crm_user');
-    return s ? JSON.parse(s) : null;
-  } catch { return null; }
-}
-function setSession(u) {
-  try { _sessStore().setItem('crm_user', JSON.stringify(u)); }
-  catch(e) { console.warn('setSession falhou:', e); }
-}
-function clearSession() {
-  try { sessionStorage.removeItem('crm_user'); } catch {}
-  try { localStorage.removeItem('crm_user'); } catch {}
-}
-
-// Query de clientes filtrada por nível
-function buildClientesQuery() {
-  const s = getSession();
-  // Admin vê TUDO
-  if(!s || s.nivel === 'admin') return 'clientes?order=created_at.asc';
-  // Corretor e Gerente veem APENAS os próprios clientes
-  return `clientes?corretor_id=eq.${s.id}&order=created_at.asc`;
-}
-
 // Login
 async function fazerLogin() {
-  const loginVal = document.getElementById('login-user').value.trim();
+  const emailVal = document.getElementById('login-user').value.trim();
   const senhaVal = document.getElementById('login-pass').value;
   const errEl    = document.getElementById('login-err');
   const btn      = document.querySelector('.login-btn');
   errEl.textContent = '';
 
-  if(!loginVal || !senhaVal) { errEl.textContent = '⚠️ Preencha login e senha.'; return; }
+  if(!emailVal || !senhaVal) { errEl.textContent = '⚠️ Preencha e-mail e senha.'; return; }
 
   // Feedback visual imediato — crítico para Safari mobile
   if(btn) { btn.disabled = true; btn.textContent = '⏳ Entrando...'; }
@@ -3236,37 +3171,29 @@ async function fazerLogin() {
   const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000));
 
   try {
-    const data = await Promise.race([
-      sbFetch(`usuarios?login=eq.${encodeURIComponent(loginVal)}&ativo=eq.true`),
+    const result = await Promise.race([
+      _sb.auth.signInWithPassword({ email: emailVal, password: senhaVal }),
       timeout
     ]);
-    if(!data || !data.length) {
-      errEl.textContent = '❌ Login não encontrado.';
-      if(btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
-      return;
-    }
-    const u = data[0];
-    if(u.senha !== senhaVal) {
-      errEl.textContent = '❌ Senha incorreta.';
+    const { data, error } = result;
+
+    if(error) {
+      errEl.textContent = '❌ E-mail ou senha incorretos.';
       if(btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
       return;
     }
 
-    const sess = {
-      id:         u.id,
-      nome:       u.nome,
-      login:      u.login,
-      nivel:      u.nivel,
-      gerente_id: u.gerente_id || null,
-      permissoes: u.permissoes || { deletar:true, exportar:true, email_massa:true, imoveis:true },
-      creci:      u.creci || '',
-      email:      u.email || '',
-      telefone:   u.telefone || '',
-    };
-    setSession(sess);
+    // Atualizar sessão SDK (onAuthStateChange atualiza _sbSession, mas pode haver delay)
+    _sbSession  = data.session;
+    currentUser = data.user;
+
+    const profile = await loadProfile(data.user.id);
+    currentProfile = profile;
+
+    const sess = buildSessFromProfile(data.user, profile);
 
     // Log de entrada (não bloqueia o fluxo se falhar)
-    registrarLog('login', `${u.nome} entrou no sistema`).catch(()=>{});
+    registrarLog('login', `${sess.nome} entrou no sistema`).catch(e=>console.warn('registrarLog:', e));
 
     // Esconder tela de login e mostrar app
     document.getElementById('login-screen').classList.add('hidden');
@@ -3289,9 +3216,8 @@ async function fazerLogin() {
 
 // Logout
 async function fazerLogout() {
-  await registrarLog('logout', `${getSession()?.nome||'usuário'} saiu do sistema`);
-  clearSession();
-  // Limpar dados em memória
+  registrarLog('logout', `${currentProfile?.nome||currentUser?.email||'usuário'} saiu do sistema`).catch(e=>console.warn('registrarLog:', e));
+  await _sb.auth.signOut();
   DB = []; VIS = []; IMOVEIS = [];
   location.reload();
 }
@@ -3351,9 +3277,11 @@ document.addEventListener('click', e => {
 // ======= ADMIN — GESTÃO DE USUÁRIOS =======
 
 let _usuarios = [];
+let _finDataId = null; // id do registro em dados_financeiros do usuário logado (null = ainda não existe)
 
 async function loadUsuarios() {
-  const data = await sbFetch('usuarios?order=created_at.asc');
+  const { data, error } = await _sb.from('profiles').select('*').order('created_at', { ascending: true });
+  if(error) { console.error('loadUsuarios:', error.message); return; }
   _usuarios = data || [];
   renderUsuarios();
   renderLog();
@@ -3373,14 +3301,13 @@ function renderUsuarios() {
       ? '<span style="color:#4ade80;font-size:11px">● Ativo</span>'
       : '<span style="color:#6b7280;font-size:11px">● Inativo</span>';
     return `<tr>
-      <td><strong>${u.nome}</strong><br><span style="font-size:11px;color:var(--text3)">${u.email||'—'}</span></td>
-      <td style="font-family:monospace">${u.login}</td>
+      <td><strong>${u.nome}</strong><br><span style="font-size:11px;color:var(--text3)">${u.creci||'—'}</span></td>
       <td>${nivelBadge}</td>
-      <td style="font-size:12px;color:var(--text3)">${u.creci||'—'}</td>
+      <td style="font-size:12px;color:var(--text3)">${u.telefone||'—'}</td>
       <td>${statusBadge}</td>
       <td>
         <button onclick="editarUsuario('${u.id}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--text2);margin-right:4px">✏️ Editar</button>
-        ${u.id !== 'admin_joao' ? `<button onclick="toggleUsuarioAtivo('${u.id}',${!u.ativo})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--text2)">${u.ativo?'⏸ Desativar':'▶️ Ativar'}</button>` : ''}
+        <button onclick="toggleUsuarioAtivo('${u.id}',${!u.ativo})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--text2)">${u.ativo?'⏸ Desativar':'▶️ Ativar'}</button>
       </td>
     </tr>`;
   }).join('');
@@ -3389,7 +3316,8 @@ function renderUsuarios() {
 async function renderLog() {
   const el = document.getElementById('log-list');
   if(!el) return;
-  const data = await sbFetch('log_atividades?order=created_at.desc&limit=30');
+  const { data, error } = await _sb.from('log_atividades').select('*').order('created_at', { ascending: false }).limit(30);
+  if(error) { el.innerHTML = '<div style="color:var(--text3);padding:12px 0">Erro ao carregar atividades.</div>'; return; }
   if(!data?.length) { el.innerHTML = '<div style="color:var(--text3);padding:12px 0">Nenhuma atividade registrada.</div>'; return; }
   el.innerHTML = data.map(l => {
     const dt = new Date(l.created_at).toLocaleString('pt-BR');
@@ -3401,76 +3329,32 @@ async function renderLog() {
 }
 
 async function registrarLog(acao, detalhe) {
-  const sess = getSession();
-  if(!sess) return;
-  // Buscar dados atualizados do usuário
-  try {
-    const resp = await fetch(`https://acxkubuwfwdxmkrykbds.supabase.co/rest/v1/usuarios?id=eq.${sess.id}`, {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY }
-    });
-    if(resp.ok) {
-      const arr = await resp.json();
-      if(arr[0]) { sess.telegram_chat_id = arr[0].telegram_chat_id; setSession(sess); }
-    }
-  } catch(e) {}
-  try {
-    await sbFetch('log_atividades?on_conflict=id', {
-      method: 'POST',
-      prefer: 'return=minimal',
-      headers: {'Prefer':'resolution=merge-duplicates,return=minimal'},
-      body: JSON.stringify({
-        id: Date.now().toString()+Math.random().toString(36).slice(2,5),
-        usuario_id:   sess.id,
-        usuario_nome: sess.nome,
-        acao, detalhe,
-        created_at: new Date().toISOString()
-      })
-    });
-  } catch(e) { /* silencioso */ }
+  if(!currentUser) return;
+  const { error } = await _sb.from('log_atividades').insert({
+    id: crypto.randomUUID(),
+    user_id: currentUser.id,
+    acao,
+    detalhe: detalhe || null,
+    created_at: new Date().toISOString()
+  });
+  if(error) console.warn('registrarLog:', error.message);
 }
 
-// Modal novo usuário
+// Criação de usuário: deve ser feita pelo painel Supabase → Authentication → Users → Add user.
+// O trigger on_auth_user_created cria o profile automaticamente.
 function openModalNovoUsuario() {
-  document.getElementById('modal-usuario-title').textContent = '👤 Novo Usuário';
-  document.getElementById('mu-id').value     = '';
-  document.getElementById('mu-nome').value   = '';
-  document.getElementById('mu-login').value  = '';
-  document.getElementById('mu-senha').value  = '';
-  document.getElementById('mu-email').value  = '';
-  document.getElementById('mu-tel').value    = '';
-  document.getElementById('mu-creci').value  = '';
-  document.getElementById('mu-cpfcnpj').value= '';
-  document.getElementById('mu-pix').value    = '';
-  document.getElementById('mu-banco').value  = '';
-  document.getElementById('mu-agencia').value= '';
-  document.getElementById('mu-conta').value  = '';
-  document.getElementById('mu-nivel').value  = 'corretor';
-  document.getElementById('mu-tipopessoa').value = 'Física';
-  document.getElementById('perm-deletar').checked = true;
-  document.getElementById('perm-exportar').checked = true;
-  document.getElementById('perm-email').checked    = true;
-  document.getElementById('perm-imoveis').checked  = true;
-  document.getElementById('modal-usuario').style.display = 'flex';
+  showToast('Para criar um usuário: acesse Supabase → Authentication → Users → Add user.', 'error');
 }
 
 function editarUsuario(id) {
   const u = _usuarios.find(x => x.id === id);
   if(!u) return;
   document.getElementById('modal-usuario-title').textContent = '✏️ Editar Usuário';
-  document.getElementById('mu-id').value      = u.id;
-  document.getElementById('mu-nome').value    = u.nome||'';
-  document.getElementById('mu-login').value   = u.login||'';
-  document.getElementById('mu-senha').value   = '';  // não exibe senha atual
-  document.getElementById('mu-email').value   = u.email||'';
-  document.getElementById('mu-tel').value     = u.telefone||'';
-  document.getElementById('mu-creci').value   = u.creci||'';
-  document.getElementById('mu-cpfcnpj').value = u.cpf_cnpj||'';
-  document.getElementById('mu-pix').value     = u.pix||'';
-  document.getElementById('mu-banco').value   = u.banco||'';
-  document.getElementById('mu-agencia').value = u.agencia||'';
-  document.getElementById('mu-conta').value   = u.conta||'';
-  document.getElementById('mu-nivel').value   = u.nivel||'corretor';
-  document.getElementById('mu-tipopessoa').value = u.tipo_pessoa||'Física';
+  document.getElementById('mu-id').value    = u.id;
+  document.getElementById('mu-nome').value  = u.nome||'';
+  document.getElementById('mu-nivel').value = u.nivel||'corretor';
+  document.getElementById('mu-tel').value   = u.telefone||'';
+  document.getElementById('mu-creci').value = u.creci||'';
   const perm = u.permissoes || {};
   document.getElementById('perm-deletar').checked = perm.deletar !== false;
   document.getElementById('perm-exportar').checked = perm.exportar !== false;
@@ -3489,15 +3373,10 @@ function updateCpfCnpjLabel() {
 }
 
 async function salvarUsuario() {
-  const id    = document.getElementById('mu-id').value;
-  const nome  = document.getElementById('mu-nome').value.trim();
-  const login = document.getElementById('mu-login').value.trim();
-  const senha = document.getElementById('mu-senha').value;
-
-  if(!nome)  { showToast('Nome é obrigatório','error'); return; }
-  if(!login) { showToast('Login é obrigatório','error'); return; }
-  if(!id && !senha) { showToast('Senha é obrigatória para novo usuário','error'); return; }
-  if(senha && senha.length < 6) { showToast('Senha deve ter ao menos 6 caracteres','error'); return; }
+  const id   = document.getElementById('mu-id').value;
+  const nome = document.getElementById('mu-nome').value.trim();
+  if(!id)   { showToast('Nenhum usuário selecionado para edição.','error'); return; }
+  if(!nome) { showToast('Nome é obrigatório','error'); return; }
 
   const permissoes = {
     deletar:    document.getElementById('perm-deletar').checked,
@@ -3506,120 +3385,81 @@ async function salvarUsuario() {
     imoveis:    document.getElementById('perm-imoveis').checked,
   };
 
-  let resultado = null;
+  const payload = {
+    nome,
+    nivel:    document.getElementById('mu-nivel').value,
+    telefone: document.getElementById('mu-tel').value.trim()||null,
+    creci:    document.getElementById('mu-creci').value.trim()||null,
+    permissoes,
+  };
 
-  if(id) {
-    // ── EDIÇÃO: usa PATCH para atualizar apenas os campos editados ──
-    // Não inclui created_at nem força ativo (preserva estado atual)
-    const patchPayload = {
-      nome,
-      login,
-      nivel:       document.getElementById('mu-nivel').value,
-      email:       document.getElementById('mu-email').value.trim()||null,
-      telefone:    document.getElementById('mu-tel').value.trim()||null,
-      creci:       document.getElementById('mu-creci').value.trim()||null,
-      tipo_pessoa: document.getElementById('mu-tipopessoa').value,
-      cpf_cnpj:    document.getElementById('mu-cpfcnpj').value.trim()||null,
-      pix:         document.getElementById('mu-pix').value.trim()||null,
-      banco:       document.getElementById('mu-banco').value.trim()||null,
-      agencia:     document.getElementById('mu-agencia').value.trim()||null,
-      conta:       document.getElementById('mu-conta').value.trim()||null,
-      permissoes,
-    };
-    if(senha) patchPayload.senha = senha;
-
-    // return=representation faz o Supabase devolver a linha atualizada como JSON
-    // Isso permite confirmar que o UPDATE foi aceito (array vazio = RLS bloqueou ou id não existe)
-    resultado = await sbFetch(`usuarios?id=eq.${id}`, {
-      method: 'PATCH',
-      prefer: 'return=representation',
-      body: JSON.stringify(patchPayload)
-    });
-  } else {
-    // ── CRIAÇÃO: usa POST com novo id e created_at ──
-    const postPayload = {
-      id:          'usr_'+Date.now(),
-      nome,
-      login,
-      senha,
-      nivel:       document.getElementById('mu-nivel').value,
-      email:       document.getElementById('mu-email').value.trim()||null,
-      telefone:    document.getElementById('mu-tel').value.trim()||null,
-      creci:       document.getElementById('mu-creci').value.trim()||null,
-      tipo_pessoa: document.getElementById('mu-tipopessoa').value,
-      cpf_cnpj:    document.getElementById('mu-cpfcnpj').value.trim()||null,
-      pix:         document.getElementById('mu-pix').value.trim()||null,
-      banco:       document.getElementById('mu-banco').value.trim()||null,
-      agencia:     document.getElementById('mu-agencia').value.trim()||null,
-      conta:       document.getElementById('mu-conta').value.trim()||null,
-      permissoes,
-      ativo:       true,
-      created_at:  new Date().toISOString(),
-    };
-    resultado = await sbFetch('usuarios', {
-      method: 'POST',
-      prefer: 'return=minimal',
-      body: JSON.stringify(postPayload)
-    });
+  const { data, error } = await _sb.from('profiles').update(payload).eq('id', id).select().single();
+  if(error || !data) {
+    showToast('❌ Alteração não salva: '+(error?.message||'sem resposta'),'error');
+    await loadUsuarios();
+    return;
   }
-
-  // Verifica falha no PATCH: com return=representation, Supabase retorna array com a linha atualizada.
-  // Array vazio [] significa que o id não foi encontrado ou RLS bloqueou o UPDATE.
-  // null significa erro HTTP (sbFetch retorna null em qualquer r.ok===false).
-  if(id) {
-    if(!resultado || (Array.isArray(resultado) && resultado.length === 0)) {
-      showToast('❌ Alteração não salva. Verifique permissões ou conexão.', 'error');
-      await loadUsuarios(); // recarrega para mostrar estado real
-      return;
-    }
-    // Atualiza _usuarios em memória imediatamente com os dados confirmados pelo Supabase
-    const updated = Array.isArray(resultado) ? resultado[0] : null;
-    if(updated) {
-      _usuarios = _usuarios.map(u => u.id === updated.id ? updated : u);
-    }
-  }
-
+  _usuarios = _usuarios.map(u => u.id === data.id ? data : u);
   closeModalUsuario();
-  registrarLog('usuario', `${id ? 'Editou' : 'Criou'} usuário ${nome}`).catch(()=>{});
+  registrarLog('usuario', `Editou perfil de ${nome}`).catch(e=>console.warn('registrarLog:', e));
   await loadUsuarios();
-  showToast(id ? '✅ Usuário atualizado!' : '✅ Usuário criado!', 'success');
+  showToast('✅ Usuário atualizado!', 'success');
 }
 
 async function toggleUsuarioAtivo(id, ativo) {
-  await sbFetch(`usuarios?id=eq.${id}`, {
-    method: 'PATCH',
-    prefer: 'return=minimal',
-    body: JSON.stringify({ ativo })
-  });
+  const { error } = await _sb.from('profiles').update({ ativo }).eq('id', id);
+  if(error) { showToast('❌ Erro ao alterar status: '+error.message,'error'); return; }
   await registrarLog('usuario', `${ativo ? 'Ativou' : 'Desativou'} usuário ID ${id}`);
   await loadUsuarios();
   showToast(ativo ? '✅ Usuário ativado.' : '⏸ Usuário desativado.', 'success');
 }
 
 // Modal Minha Conta (perfil)
-function openModalPerfil() {
+async function openModalPerfil() {
   closeUserMenu();
-  const sess = getSession();
-  if(!sess) return;
+  if(!currentUser || !currentProfile) return;
+
+  // Carregar dados financeiros (maybeSingle: null se não existir, sem erro)
+  const { data: fin } = await _sb.from('dados_financeiros').select('*').eq('user_id', currentUser.id).maybeSingle();
+  _finDataId = fin?.id || null;
+
   const el = document.getElementById('perfil-content');
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
-      <div class="perfil-avatar">${sess.nome.charAt(0).toUpperCase()}</div>
+      <div class="perfil-avatar">${currentProfile.nome.charAt(0).toUpperCase()}</div>
       <div>
-        <div style="font-weight:700;font-size:16px">${sess.nome}</div>
-        <div style="font-size:12px;color:var(--text3)">${sess.nivel} · ${sess.creci||'—'}</div>
+        <div style="font-weight:700;font-size:16px">${currentProfile.nome}</div>
+        <div style="font-size:12px;color:var(--text3)">${currentProfile.nivel} · ${currentProfile.creci||'—'}</div>
       </div>
     </div>
-    <div class="login-field"><label>Nome</label><input type="text" id="perf-nome" value="${sess.nome}"></div>
-    <div class="login-field"><label>E-mail</label><input type="email" id="perf-email" value="${sess.email||''}"></div>
-    <div class="login-field"><label>Telefone</label><input type="text" id="perf-tel" value="${sess.telefone||''}"></div>
+    <div class="login-field"><label>Nome</label><input type="text" id="perf-nome" value="${currentProfile.nome}"></div>
+    <div class="login-field"><label>E-mail (somente leitura)</label><input type="email" id="perf-email" value="${currentUser.email||''}" readonly style="opacity:.6;cursor:default"></div>
+    <div class="login-field"><label>Telefone</label><input type="text" id="perf-tel" value="${currentProfile.telefone||''}"></div>
     <div class="login-field"><label>Nova senha (deixe em branco para manter)</label><input type="password" id="perf-senha" placeholder="Mínimo 6 caracteres"></div>
     <div style="margin-top:16px;padding:14px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
       <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px">📱 Vincular Telegram</div>
-      <div class="login-field" style="margin-bottom:8px"><label>Telegram Chat ID</label><input type="text" id="perf-telegram" value="${sess.telegram_chat_id||''}" placeholder="Ex: 123456789"></div>
+      <div class="login-field" style="margin-bottom:8px"><label>Telegram Chat ID</label><input type="text" id="perf-telegram" value="${currentProfile.telegram_chat_id||''}" placeholder="Ex: 123456789"></div>
       <div style="font-size:11px;color:var(--text3);line-height:1.5">
         Para descobrir seu ID: abra o Telegram e mande <strong>/meuid</strong> para o bot do CRM. Cole o número aqui.
       </div>
+    </div>
+    <div style="margin-top:16px;padding:14px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:12px">💳 Dados Financeiros</div>
+      <div class="form-row-2" style="margin-bottom:10px">
+        <div class="login-field" style="margin:0"><label>Tipo de Pessoa</label>
+          <select id="perf-tipopessoa" style="width:100%;padding:10px 14px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none">
+            <option value="Física" ${(fin?.tipo_pessoa||'Física')==='Física'?'selected':''}>Física</option>
+            <option value="Jurídica" ${fin?.tipo_pessoa==='Jurídica'?'selected':''}>Jurídica</option>
+          </select>
+        </div>
+        <div class="login-field" style="margin:0"><label>CPF / CNPJ</label><input type="text" id="perf-cpfcnpj" value="${fin?.cpf_cnpj||''}" placeholder="000.000.000-00"></div>
+      </div>
+      <div class="login-field" style="margin-bottom:10px"><label>PIX</label><input type="text" id="perf-pix" value="${fin?.pix||''}" placeholder="CPF, e-mail ou telefone"></div>
+      <div class="form-row-2" style="margin-bottom:10px">
+        <div class="login-field" style="margin:0"><label>Banco</label><input type="text" id="perf-banco" value="${fin?.banco||''}" placeholder="Ex: Nubank"></div>
+        <div class="login-field" style="margin:0"><label>Agência</label><input type="text" id="perf-agencia" value="${fin?.agencia||''}" placeholder="0000"></div>
+      </div>
+      <div class="login-field"><label>Conta Corrente</label><input type="text" id="perf-conta" value="${fin?.conta||''}" placeholder="00000-0"></div>
     </div>
   `;
   document.getElementById('modal-perfil').style.display = 'flex';
@@ -3630,30 +3470,55 @@ function closeModalPerfil() {
 }
 
 async function salvarPerfil() {
-  const sess  = getSession();
-  if(!sess) return;
+  if(!currentUser || !currentProfile) return;
   const nome  = document.getElementById('perf-nome').value.trim();
-  const email = document.getElementById('perf-email').value.trim();
   const tel   = document.getElementById('perf-tel').value.trim();
   const senha = document.getElementById('perf-senha').value;
+  const telegram = document.getElementById('perf-telegram')?.value.trim()||null;
 
   if(!nome) { showToast('Nome obrigatório','error'); return; }
   if(senha && senha.length < 6) { showToast('Senha deve ter ao menos 6 caracteres','error'); return; }
 
-  const telegram = document.getElementById('perf-telegram')?.value.trim()||null;
-  const payload = { nome, email: email||null, telefone: tel||null, telegram_chat_id: telegram };
-  if(senha) payload.senha = senha;
+  // Atualizar profile no banco
+  const { data: updatedProfile, error: profErr } = await _sb
+    .from('profiles')
+    .update({ nome, telefone: tel||null, telegram_chat_id: telegram })
+    .eq('id', currentUser.id)
+    .select()
+    .single();
+  if(profErr) { showToast('❌ Erro ao salvar: '+profErr.message,'error'); return; }
 
-  await sbFetch(`usuarios?id=eq.${sess.id}`, {
-    method: 'PATCH',
-    prefer: 'return=minimal',
-    body: JSON.stringify(payload)
-  });
+  // Alterar senha via Supabase Auth se preenchida
+  if(senha) {
+    const { error: passErr } = await _sb.auth.updateUser({ password: senha });
+    if(passErr) { showToast('❌ Erro ao alterar senha: '+passErr.message,'error'); return; }
+  }
 
-  // Atualizar sessão
-  sess.nome  = nome;
-  sess.email = email;
-  setSession(sess);
+  // Salvar dados financeiros (insert se não existe, update se existe)
+  const finPayload = {
+    user_id:     currentUser.id,
+    tipo_pessoa: document.getElementById('perf-tipopessoa')?.value || null,
+    cpf_cnpj:    document.getElementById('perf-cpfcnpj')?.value.trim()  || null,
+    pix:         document.getElementById('perf-pix')?.value.trim()      || null,
+    banco:       document.getElementById('perf-banco')?.value.trim()    || null,
+    agencia:     document.getElementById('perf-agencia')?.value.trim()  || null,
+    conta:       document.getElementById('perf-conta')?.value.trim()    || null,
+    updated_at:  new Date().toISOString(),
+  };
+  if(_finDataId) {
+    const { error: finErr } = await _sb.from('dados_financeiros').update(finPayload).eq('id', _finDataId);
+    if(finErr) { showToast('❌ Erro ao salvar dados financeiros: '+finErr.message,'error'); return; }
+  } else {
+    const { data: newFin, error: finErr } = await _sb.from('dados_financeiros')
+      .insert({ id: crypto.randomUUID(), ...finPayload })
+      .select('id').single();
+    if(finErr) { showToast('❌ Erro ao salvar dados financeiros: '+finErr.message,'error'); return; }
+    _finDataId = newFin.id;
+  }
+
+  // Atualizar estado global
+  currentProfile = updatedProfile;
+  const sess = buildSessFromProfile(currentUser, currentProfile);
   atualizarUserBadge(sess);
   closeModalPerfil();
   showToast('✅ Perfil atualizado!', 'success');
@@ -3677,9 +3542,6 @@ function goToAdmin() {
 
 
 // ======= INIT =======
-// Backup localStorage antes da migração
-const _localBackup = localStorage.getItem('crm_v4');
-if(_localBackup && _localBackup !== '[]') localStorage.setItem('crm_v4_backup', _localBackup);
 
 // Apply saved theme/layout
 document.body.classList.remove('dark','light','layout-a','layout-b','layout-c');
@@ -3694,8 +3556,13 @@ document.getElementById('logo-area').innerHTML=logos[curLayout];
 
 // ======= CHECK DE SESSÃO =======
 (async function checkSession() {
-  const sess = getSession();
-  if(sess) {
+  const { data: { session } } = await _sb.auth.getSession();
+  if(session) {
+    _sbSession  = session;
+    currentUser = session.user;
+    const profile = await loadProfile(session.user.id);
+    currentProfile = profile;
+    const sess = buildSessFromProfile(session.user, profile);
     // Já logado — esconder tela de login e entrar
     document.getElementById('login-screen').classList.add('hidden');
     aplicarPermissoes(sess);
