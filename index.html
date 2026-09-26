@@ -2978,7 +2978,7 @@ let editImovelId = null;
 const sbSaveImovel = async (im) => {
   const payload = {
     id: im.id,
-    user_id: currentUser?.id || null,
+    user_id: im.userId || currentUser?.id || null,
     nome: im.nome||null,
     tipo: im.tipo||null,
     unidade: im.unidade||null,
@@ -3003,9 +3003,15 @@ const sbSaveImovel = async (im) => {
 };
 
 const sbDeleteImovel = async (id) => {
-  const { error } = await _sb.from('imoveis').delete().eq('id', id);
-  if(error) console.error('sbDeleteImovel:', error.message);
+  const { data, error } = await _sb.from('imoveis').delete().eq('id', id).select('id');
+  if(error) { console.error('sbDeleteImovel:', error.message); return error; }
+  if(!data || data.length === 0) return { message: 'sem permissão para excluir este imóvel, ou ele já não existe' };
+  return null;
 };
+
+// quem pode alterar: o corretor que cadastrou, ou o admin
+const podeEditarImovel = im => !!currentUser && !!im &&
+  (im.userId === currentUser.id || currentProfile?.nivel === 'admin');
 
 async function loadImoveis() {
   const { data, error } = await _sb.from('imoveis').select('*').order('created_at', { ascending: false });
@@ -3017,6 +3023,7 @@ async function loadImoveis() {
       suites: r.suites||'', vagas: r.vagas||'', permuta: r.permuta||'',
       parcelamento: r.parcelamento||'', mobiliado: r.mobiliado||'',
       origemProp: r.origem_prop||'', obs: r.obs||'',
+      userId: r.user_id||null,
       createdAt: r.created_at||new Date().toISOString()
     }));
     sbOnline = true;
@@ -3059,8 +3066,9 @@ function renderImoveis() {
         ${im.obs?`<div style="font-size:11px;color:var(--gold);margin-top:6px;font-style:italic">"${im.obs}"</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:4px">
-        <button class="act-btn" onclick="openImovelModal('${im.id}')">✏️</button>
-        <button class="del-btn" onclick="deleteImovel('${im.id}')">🗑</button>
+        ${podeEditarImovel(im) ? `<button class="act-btn" onclick="openImovelModal('${im.id}')">✏️</button>
+        <button class="del-btn" onclick="deleteImovel('${im.id}')">🗑</button>` :
+        `<span title="Cadastrado por outro corretor. Só ele pode alterar." style="font-size:11px;color:var(--text3);white-space:nowrap">🔒 só leitura</span>`}
       </div>
     </div>`;
   }).join('');
@@ -3101,11 +3109,14 @@ function closeImovelModal() {
 }
 
 async function saveImovel() {
-  const nome = document.getElementById('im-nome').value.trim();
+  let nome = document.getElementById('im-nome').value.trim();
   if(!nome) nome = 'Imóvel sem nome';
   const now = new Date().toISOString();
+  const imOriginal = editImovelId ? IMOVEIS.find(x=>x.id===editImovelId) : null;
+  if(editImovelId && !podeEditarImovel(imOriginal)) { showToast('❌ Só quem cadastrou este imóvel pode alterá-lo','error'); return; }
   const im = {
     id: editImovelId||crypto.randomUUID(),
+    userId: imOriginal ? (imOriginal.userId || currentUser?.id) : currentUser?.id,
     nome, tipo: document.getElementById('im-tipo').value,
     unidade: document.getElementById('im-unidade').value.trim(),
     torre: document.getElementById('im-torre').value.trim(),
@@ -3140,8 +3151,11 @@ async function deleteImovel(id) {
     `Tem certeza que deseja excluir "${im?im.nome:'este imóvel'}"? Esta ação não pode ser desfeita.`,
     '🏠',
     async () => {
+      if(!podeEditarImovel(im)) { showToast('❌ Só quem cadastrou este imóvel pode excluí-lo','error'); return; }
+      const delErr = await sbDeleteImovel(id);
+      if(delErr) { showToast('❌ Não foi excluído: '+delErr.message,'error'); await loadImoveis(); renderImoveis(); return; }
       IMOVEIS = IMOVEIS.filter(x=>x.id!==id);
-      await sbDeleteImovel(id); renderImoveis();
+      renderImoveis();
       showToast('Imóvel deletado ✅','success');
     }
   );
